@@ -12,7 +12,7 @@ export function ContextTab({ data }: { data: WorkspaceData }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   if (data.context.length === 0) return <Empty>Nenhum contexto cadastrado.</Empty>;
   return (
-    <div className="space-y-1 overflow-y-auto p-2">
+    <div className="h-full space-y-1 overflow-y-auto p-2">
       {data.context.map((c) => {
         const isOpen = open[c.id] ?? c.kind === "summary";
         return (
@@ -37,7 +37,7 @@ export function ActivityTab({ data, now }: { data: WorkspaceData; now: Date }) {
   const name = (id: string | null) => data.members.find((m) => m.user_id === id)?.profile?.display_name.replace(/\s*\(.*\)/, "") ?? "—";
   const task = (id: string | null) => data.tasks.find((t) => t.id === id);
   return (
-    <ol className="overflow-y-auto p-2">
+    <ol className="h-full overflow-y-auto p-2">
       {data.events.map((e) => {
         const t = task(e.task_id);
         const session = data.sessions.find((s) => s.id === e.agent_session_id);
@@ -90,6 +90,7 @@ export function SettingsTab({
   setDim,
   paused,
   now,
+  children,
 }: {
   workspace: Workspace;
   workspaces: Workspace[];
@@ -101,9 +102,10 @@ export function SettingsTab({
   setDim: (v: boolean) => void;
   paused: boolean;
   now: Date;
+  children?: React.ReactNode;
 }) {
   return (
-    <div className="space-y-3 overflow-y-auto p-3">
+    <div className="h-full space-y-3 overflow-y-auto p-3">
       <Row label="Workspace">
         <select value={workspace.id} onChange={(e) => onSelect(workspaces.find((w) => w.id === e.target.value)!)} className="rounded border border-line bg-raised px-1 py-0.5">
           {workspaces.map((w) => (
@@ -126,6 +128,7 @@ export function SettingsTab({
       <Row label="Sincronização">
         <span className={paused ? "text-warn" : "text-muted"}>{paused ? "pausada (bandeja)" : "ativa"}</span>
       </Row>
+      {children}
       <AgentsSection workspaceId={workspace.id} now={now} />
       <p className="text-[10.5px] leading-snug text-muted">Repositório, hooks e convites entram nas Fases 3 e 4.</p>
       <button type="button" onClick={() => void supabase.auth.signOut()} className="rounded-md border border-line px-2 py-1 hover:bg-raised">

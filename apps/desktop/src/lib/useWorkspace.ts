@@ -121,9 +121,9 @@ export function useWorkspace(paused: boolean) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Lista de workspaces do usuário e escolha do último usado.
-  useEffect(() => {
-    (async () => {
+  // Lista de workspaces do usuário e escolha do último usado (ou de `preferId`).
+  const loadWorkspaces = useCallback(
+    async (preferId?: string) => {
       const { data: rows, error: err } = await supabase.from("workspaces").select("*").order("created_at");
       if (err) {
         setError(err.message);
@@ -133,15 +133,17 @@ export function useWorkspace(paused: boolean) {
       const list = (rows ?? []) as Workspace[];
       setWorkspaces(list);
       if (list.length === 0) return setStatus("empty");
-      let saved: string | null = null;
+      let saved: string | null = preferId ?? null;
       try {
-        saved = localStorage.getItem("cooper.workspace");
+        saved ??= localStorage.getItem("cooper.workspace");
       } catch {
         /* ignore */
       }
       await selectWorkspace(list.find((w) => w.id === saved) ?? list[0]!);
-    })();
-  }, [selectWorkspace]);
+    },
+    [selectWorkspace],
+  );
+  useEffect(() => void loadWorkspaces(), [loadWorkspaces]);
 
   // Realtime: uma assinatura por tabela, filtrada pelo workspace.
   useEffect(() => {
@@ -164,5 +166,5 @@ export function useWorkspace(paused: boolean) {
     };
   }, [wsId, paused, reload]);
 
-  return { data, workspaces, status, realtime, error, selectWorkspace, reload };
+  return { data, workspaces, status, realtime, error, selectWorkspace, loadWorkspaces, reload };
 }

@@ -6,6 +6,7 @@ import { useWorkspace } from "../lib/useWorkspace";
 import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, type WidgetMode } from "../lib/window";
 import { ActivityTab, ContextTab, Empty, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
+import { CreateWorkspace, MembersSection, Onboarding, PendingInvites } from "./Team";
 import { TasksTab } from "./TasksTab";
 import { TeamCard } from "./TeamCard";
 import { Icon, IconButton } from "./ui";
@@ -33,7 +34,7 @@ export function Widget({
   setTheme: (t: "dark" | "light") => void;
 }) {
   const [paused, setPaused] = useState(false);
-  const { data, workspaces, status, realtime, error, selectWorkspace } = useWorkspace(paused);
+  const { data, workspaces, status, realtime, error, selectWorkspace, loadWorkspaces } = useWorkspace(paused);
   const [tab, setTab] = useState<Tab>(() => pref<Tab>("tab", "now"));
   const [dim, setDimState] = useState(() => pref("dim", false));
   const [now, setNow] = useState(() => new Date());
@@ -92,7 +93,7 @@ export function Widget({
       <main className="min-h-0 flex-1 overflow-hidden">
         {status === "loading" && <Empty>Carregando…</Empty>}
         {status === "error" && <Empty>Erro ao carregar: {error}</Empty>}
-        {status === "empty" && <Empty>Você ainda não participa de nenhum workspace.</Empty>}
+        {status === "empty" && <Onboarding me={session.user.id} onReady={(id) => void loadWorkspaces(id)} />}
         {status === "ready" && data.workspace && (
           <>
             {showTab === "now" && (
@@ -118,7 +119,16 @@ export function Widget({
                 setDim={setDim}
                 paused={paused}
                 now={now}
-              />
+              >
+                <MembersSection data={data} me={session.user.id} now={now} />
+                <PendingInvites onAccepted={(id) => void loadWorkspaces(id)} />
+                <details>
+                  <summary className="cursor-pointer text-muted hover:text-text">Novo projeto</summary>
+                  <div className="pt-1.5">
+                    <CreateWorkspace me={session.user.id} onCreated={(id) => void loadWorkspaces(id)} />
+                  </div>
+                </details>
+              </SettingsTab>
             )}
           </>
         )}
