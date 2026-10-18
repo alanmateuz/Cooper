@@ -25,6 +25,13 @@ pub fn run() {
     let toggle = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space);
 
     tauri::Builder::default()
+        // Precisa ser o primeiro plugin: abrir o Cooper de novo só mostra a janela que já existe.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.show();
+                let _ = w.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -36,7 +43,10 @@ pub fn run() {
                 .build(),
         )
         .setup(move |app| {
-            app.global_shortcut().register(toggle)?;
+            // Atalho ocupado (outro app, ou outra cópia do Cooper) não pode impedir o app de abrir.
+            if let Err(e) = app.global_shortcut().register(toggle) {
+                eprintln!("[cooper] atalho Ctrl+Shift+Espaço indisponível: {e}");
+            }
 
             let show = MenuItem::with_id(app, "toggle", "Mostrar/ocultar", true, None::<&str>)?;
             let pause = MenuItem::with_id(app, "pause", "Pausar sincronização", true, None::<&str>)?;
