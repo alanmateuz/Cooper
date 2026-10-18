@@ -41,7 +41,7 @@ export function Avatar({ name, color, status, size = 24 }: { name: string; color
 export function SourceBadge({ source, label }: { source: EventSource | "ai_summary"; label?: string }) {
   const text = label ?? (source === "ai_summary" ? "resumo IA" : SOURCE_LABELS[source]);
   return (
-    <span className="rounded border border-line px-1 py-px text-[9.5px] leading-none text-muted" title={`origem: ${text}`}>
+    <span className="shrink-0 rounded border border-line px-1 py-px text-[9.5px] leading-none whitespace-nowrap text-muted" title={`origem: ${text}`}>
       {text}
     </span>
   );
