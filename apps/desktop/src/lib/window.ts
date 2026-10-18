@@ -1,4 +1,5 @@
 import { isTauri } from "@tauri-apps/api/core";
+import type { MouseEvent as ReactMouseEvent } from "react";
 
 export type WidgetMode = "pill" | "compact" | "expanded";
 
@@ -16,6 +17,17 @@ export async function applyWindowMode(mode: WidgetMode) {
   const { getCurrentWindow, LogicalSize } = await import("@tauri-apps/api/window");
   const { width, height } = WINDOW_SIZES[mode];
   await getCurrentWindow().setSize(new LogicalSize(width, height));
+}
+
+/**
+ * Arrasta a janela a partir de um mousedown. Mais confiável que `data-tauri-drag-region`,
+ * que só vale para o elemento exato clicado (filhos não herdam).
+ * Ignora cliques em controles interativos e duplo clique.
+ */
+export function dragFromMouseDown(e: ReactMouseEvent) {
+  if (!inTauri || e.button !== 0 || e.detail > 1) return;
+  if ((e.target as HTMLElement).closest("button, input, select, textarea, a")) return;
+  void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow().startDragging());
 }
 
 export async function hideWindow() {

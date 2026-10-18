@@ -4,7 +4,7 @@ import { Login } from "./components/Login";
 import { Widget } from "./components/Widget";
 import { pref, setPref } from "./lib/format";
 import { isConfigured, supabase } from "./lib/supabase";
-import { applyWindowMode, inTauri, WINDOW_SIZES, type WidgetMode } from "./lib/window";
+import { applyWindowMode, dragFromMouseDown, inTauri, WINDOW_SIZES, type WidgetMode } from "./lib/window";
 
 export function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
@@ -37,11 +37,12 @@ export function App() {
   };
 
   const content = !isConfigured ? (
-    <div className="flex h-full items-center justify-center rounded-xl border border-line bg-bg p-6 text-center text-muted">
+    <div onMouseDown={dragFromMouseDown} className="flex h-full items-center justify-center rounded-xl border border-line bg-bg p-6 text-center text-muted">
       Configure SUPABASE_URL e SUPABASE_ANON_KEY no .env da raiz e reinicie.
     </div>
   ) : session === undefined ? null : session === null ? (
-    <div className="h-full rounded-xl border border-line bg-bg">
+    // Sem barra de topo no login: a tela toda arrasta (campos e botão não).
+    <div onMouseDown={dragFromMouseDown} className="h-full rounded-xl border border-line bg-bg">
       <Login />
     </div>
   ) : (

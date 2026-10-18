@@ -1,20 +1,21 @@
 import { AGENT_LABELS, PRESENCE_LABELS } from "@cooper/shared";
 import type { PersonView } from "../lib/people";
+import { dragFromMouseDown } from "../lib/window";
 import { Avatar, Icon } from "./ui";
 
 /** Modo recolhido: só avatares com status; tooltip nativo com a atividade. */
 export function Pill({ people, alerts, onExpand }: { people: PersonView[]; alerts: number; onExpand: () => void }) {
   return (
     <div
-      data-tauri-drag-region
+      onMouseDown={dragFromMouseDown}
       onDoubleClick={onExpand}
       className="flex h-full items-center gap-1.5 rounded-full border border-line bg-panel px-2.5"
       title="Duplo clique para abrir"
     >
-      <span data-tauri-drag-region className="mr-0.5 text-[10px] font-bold tracking-wider text-accent">
+      <span className="mr-0.5 text-[10px] font-bold tracking-wider text-accent">
         CO
       </span>
-      <div data-tauri-drag-region className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
         {people.slice(0, 6).map((p) => (
           <span
             key={p.userId}

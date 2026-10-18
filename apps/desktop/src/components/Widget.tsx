@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { pref, setPref } from "../lib/format";
 import { buildPeople } from "../lib/people";
 import { useWorkspace } from "../lib/useWorkspace";
-import { hideWindow, inTauri, onTrayEvent, type WidgetMode } from "../lib/window";
+import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, type WidgetMode } from "../lib/window";
 import { ActivityTab, ContextTab, Empty, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
 import { TasksTab } from "./TasksTab";
@@ -65,11 +65,11 @@ export function Widget({
 
   return (
     <div className={`flex h-full flex-col overflow-hidden rounded-xl border border-line bg-bg shadow-2xl transition-opacity ${dim ? "opacity-60 hover:opacity-100" : ""}`}>
-      <header data-tauri-drag-region className="flex h-9 shrink-0 items-center gap-1.5 border-b border-line px-2.5">
-        <span data-tauri-drag-region className="text-[10px] font-bold tracking-wider text-accent">
+      <header onMouseDown={dragFromMouseDown} className="flex h-9 shrink-0 cursor-default items-center gap-1.5 border-b border-line px-2.5">
+        <span className="text-[10px] font-bold tracking-wider text-accent">
           CO
         </span>
-        <span data-tauri-drag-region className="min-w-0 flex-1 truncate font-semibold">
+        <span className="min-w-0 flex-1 truncate font-semibold">
           {data.workspace?.name ?? "Cooper"}
         </span>
         <span
