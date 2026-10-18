@@ -49,7 +49,15 @@ if (!token || !url || !anon) {
   console.error("Defina COOPER_TOKEN (gerado no widget: Configurações → Agentes) antes de --write. URL e chave anon vêm do .env da raiz.");
   process.exit(1);
 }
-const r = spawnSync(bin, argsFor(token), { stdio: "inherit", shell: false });
+// No Windows, `codex`/`claude` instalados via npm são atalhos .cmd, que só rodam via shell.
+// Antes de usar o shell, garante que nenhum argumento tem caractere interpretável pelo cmd.exe.
+const args = argsFor(token);
+const useShell = process.platform === "win32";
+if (useShell && !args.every((a) => /^[A-Za-z0-9._:/=@-]+$/.test(a))) {
+  console.error("Argumento com caractere inesperado; abortando para não passar pelo shell.");
+  process.exit(1);
+}
+const r = spawnSync(bin, args, { stdio: "inherit", shell: useShell });
 if (r.error) {
   console.error(`Não consegui executar '${bin}': ${r.error.message}`);
   process.exit(1);
