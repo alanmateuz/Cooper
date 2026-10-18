@@ -2,7 +2,7 @@
 // em outro workspace (usado pelos testes de RLS).
 // Idempotente: recria os workspaces de teste a cada execução.
 // As senhas geradas vão para .env.local (ignorado pelo git) e não são impressas.
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
@@ -153,6 +153,27 @@ await must(
 );
 
 await must(admin.from("task_links").insert({ workspace_id: ws.id, task_id: qr.id, kind: "branch", ref: "codex/qrcode-inscricao", source: "user" }));
+
+// Tokens de agente de teste (Fase 2). Mantém o mesmo token entre execuções; só o hash vai ao banco.
+const AGENTS = [
+  { key: "ALAN", kind: "codex", workspace: ws.id },
+  { key: "BIA", kind: "claude_code", workspace: ws.id },
+  { key: "INTRUSO", kind: "codex", workspace: other.id },
+];
+for (const a of AGENTS) {
+  const envKey = `TEST_${a.key}_AGENT_TOKEN`;
+  local[envKey] ||= `coop_${randomBytes(24).toString("hex")}`;
+  await must(
+    admin.from("agent_connections").insert({
+      workspace_id: a.workspace,
+      user_id: ids[a.key],
+      agent_kind: a.kind,
+      label: "teste (seed)",
+      token_hash: createHash("sha256").update(local[envKey]).digest("hex"),
+      token_prefix: local[envKey].slice(0, 9),
+    }),
+  );
+}
 
 writeFileSync(
   LOCAL,

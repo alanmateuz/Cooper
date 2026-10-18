@@ -117,6 +117,7 @@ export function Widget({
                 dim={dim}
                 setDim={setDim}
                 paused={paused}
+                now={now}
               />
             )}
           </>

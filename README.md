@@ -38,10 +38,20 @@ Entre com `alan.teste@example.com` ou `bia.teste@example.com` e a senha em `.env
 
 ```bash
 pnpm test        # unitários (presença, validação)
-pnpm test:rls    # isolamento entre workspaces, contra o Supabase (precisa de db:push + db:seed)
+pnpm test:db     # RLS, RPCs de agente e MCP ponta a ponta, contra o Supabase (precisa de db:push, db:seed, mcp:build)
 ```
 
 ## Origem dos dados
 
 Todo dado no widget mostra de onde veio: `usuário`, `declarado` (agente via MCP), `hook` (evento observado do cliente),
 `git local`, `GitHub`, `testes`. "Executando" só aparece com evento de hook recente.
+
+## Conectar um agente (MCP)
+
+1. No widget: Configurações → Agentes → escolha o agente → **Gerar token** (aparece uma vez).
+2. Na raiz deste repositório, no PowerShell, rode o comando copiado do widget. Sem `--write`, ele só mostra o que vai gravar:
+   ```
+   $env:COOPER_TOKEN="coop_..."; pnpm mcp:config codex          # ou claude-code
+   $env:COOPER_TOKEN="coop_..."; pnpm mcp:config codex --write  # aplica (escopo de usuário)
+   ```
+A configuração fica no nível do usuário (`~/.codex/config.toml` / `~/.claude.json`): nada é escrito dentro dos repositórios em que você trabalha.

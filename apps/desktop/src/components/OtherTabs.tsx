@@ -3,6 +3,7 @@ import { useState } from "react";
 import { timeAgo } from "../lib/format";
 import { supabase } from "../lib/supabase";
 import type { WorkspaceData } from "../lib/useWorkspace";
+import { AgentsSection } from "./AgentsSection";
 import { Icon, SourceBadge } from "./ui";
 
 const KIND_LABEL = { summary: "Resumo", architecture: "Arquitetura", convention: "Convenção" } as const;
@@ -88,6 +89,7 @@ export function SettingsTab({
   dim,
   setDim,
   paused,
+  now,
 }: {
   workspace: Workspace;
   workspaces: Workspace[];
@@ -98,6 +100,7 @@ export function SettingsTab({
   dim: boolean;
   setDim: (v: boolean) => void;
   paused: boolean;
+  now: Date;
 }) {
   return (
     <div className="space-y-3 overflow-y-auto p-3">
@@ -123,9 +126,8 @@ export function SettingsTab({
       <Row label="Sincronização">
         <span className={paused ? "text-warn" : "text-muted"}>{paused ? "pausada (bandeja)" : "ativa"}</span>
       </Row>
-      <p className="text-[10.5px] leading-snug text-muted">
-        Repositório, conexão dos agentes (MCP e hooks) e convites entram nas Fases 2 e 3.
-      </p>
+      <AgentsSection workspaceId={workspace.id} now={now} />
+      <p className="text-[10.5px] leading-snug text-muted">Repositório, hooks e convites entram nas Fases 3 e 4.</p>
       <button type="button" onClick={() => void supabase.auth.signOut()} className="rounded-md border border-line px-2 py-1 hover:bg-raised">
         Sair
       </button>
