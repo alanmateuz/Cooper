@@ -1,0 +1,22 @@
+{
+  "name": "cooper",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.14.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @cooper/desktop dev",
+    "dev:desktop": "pnpm --filter @cooper/desktop tauri dev",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @cooper/shared test",
+    "test:rls": "vitest run --config tests/vitest.config.ts",
+    "db:push": "node scripts/db-push.mjs",
+    "db:seed": "node --env-file=.env scripts/seed.mjs"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "@types/node": "^26.6.5",
+    "supabase": "^2.121.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

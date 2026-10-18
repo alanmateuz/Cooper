@@ -1,0 +1,12 @@
+node_modules/
+dist/
+target/
+*.log
+.DS_Store
+
+# segredos locais — nunca versionar
+.env
+.env.local
+.env.*.local
+supabase/.temp/
+supabase/.branches/
