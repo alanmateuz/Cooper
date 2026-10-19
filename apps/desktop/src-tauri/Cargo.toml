@@ -2,6 +2,7 @@
 name = "cooper-desktop"
 version = "0.6.0"
 edition = "2021"
+license = "MIT"
 
 [lib]
 name = "cooper_desktop_lib"

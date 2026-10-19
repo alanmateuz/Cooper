@@ -102,4 +102,4 @@ Documentos: [o que é o Cooper](docs/O_QUE_E_O_COOPER.md) · [contexto para agen
 
 ## Licença
 
-A definir.
+[MIT](LICENSE) © 2026 Alan Mateus Queiroz.
