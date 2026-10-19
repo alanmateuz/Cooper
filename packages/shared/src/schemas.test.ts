@@ -21,3 +21,13 @@ describe("progressTextSchema", () => {
     expect(progressTextSchema.parse("x".repeat(120))).toHaveLength(120);
   });
 });
+
+describe("task_edited", () => {
+  it("aceita campos alterados e reaccept", () => {
+    expect(taskEventPayloadSchema.parse({ fields: ["prompt", "title"], reaccept: true })).toEqual({ fields: ["prompt", "title"], reaccept: true });
+  });
+
+  it("recusa campo desconhecido", () => {
+    expect(() => taskEventPayloadSchema.parse({ fields: ["status"] })).toThrow();
+  });
+});

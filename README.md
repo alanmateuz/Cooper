@@ -55,3 +55,10 @@ Todo dado no widget mostra de onde veio: `usuário`, `declarado` (agente via MCP
    $env:COOPER_TOKEN="coop_..."; pnpm mcp:config codex --write  # aplica (escopo de usuário)
    ```
 A configuração fica no nível do usuário (`~/.codex/config.toml` / `~/.claude.json`): nada é escrito dentro dos repositórios em que você trabalha.
+
+## Segurança do servidor
+
+- **Deixe "Confirm email" ligado** no Supabase (Authentication → Providers → Email). O convite para um projeto confia no
+  e-mail que vem no JWT da conta; sem confirmação, alguém poderia criar conta com o e-mail de outra pessoa e aceitar o
+  convite dela.
+- Agentes só acessam o banco pelas funções `mcp_*`, autenticadas pelo token (guardado só como hash).
