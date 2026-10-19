@@ -8,10 +8,11 @@ import {
   type TaskEvent,
 } from "@cooper/shared";
 import { useEffect, useState } from "react";
+import { friendlyError } from "../lib/errors";
 import { timeAgo } from "../lib/format";
 import { supabase } from "../lib/supabase";
 import type { WorkspaceData } from "../lib/useWorkspace";
-import { Icon, SourceBadge } from "./ui";
+import { ConfirmBar, Icon, SourceBadge } from "./ui";
 
 type Data = WorkspaceData;
 
@@ -21,7 +22,7 @@ const who = (d: Data, id: string | null, agent: AgentKind | null) => (id ? autho
 
 async function rpc(fn: string, args: Record<string, unknown>): Promise<ContextWriteResult> {
   const { data, error } = await supabase.rpc(fn, args);
-  if (error) throw new Error(error.message);
+  if (error) throw error; // friendlyError traduz no componente
   return data as ContextWriteResult;
 }
 
@@ -81,7 +82,7 @@ function RecentChanges({ data, me, now, onShow }: { data: Data; me: string; now:
           : await rpc("context_restore", { p_block: b.id, p_version: v - 1, p_base_version: b.version });
       if (!r.ok) setErr(r.message);
     } catch (x) {
-      setErr(String(x));
+      setErr(friendlyError(x));
     }
   }
 
@@ -117,14 +118,20 @@ function RecentChanges({ data, me, now, onShow }: { data: Data; me: string; now:
 function BlockCard({ block, data, now, open, setOpen }: { block: ContextBlock; data: Data; now: Date; open: boolean; setOpen: (v: boolean) => void }) {
   const [mode, setMode] = useState<"view" | "edit" | "history">("view");
   const [err, setErr] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function remove() {
-    if (!confirm(`Apagar o bloco "${block.title}"? Dá para desfazer pelo aviso de mudanças.`)) return;
+    setDeleting(true);
+    setErr(null);
     try {
       const r = await rpc("context_delete", { p_block: block.id, p_base_version: block.version });
       if (!r.ok) setErr(r.message);
+      else setConfirmDelete(false);
     } catch (x) {
-      setErr(String(x));
+      setErr(friendlyError(x));
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -153,8 +160,17 @@ function BlockCard({ block, data, now, open, setOpen }: { block: ContextBlock; d
               <div className="flex gap-2 text-[10.5px]">
                 <button type="button" onClick={() => setMode("edit")} className="text-accent hover:underline">editar</button>
                 <button type="button" onClick={() => setMode("history")} className="text-accent hover:underline">histórico</button>
-                <button type="button" onClick={() => void remove()} className="text-muted hover:text-danger">apagar</button>
+                <button type="button" onClick={() => setConfirmDelete(true)} className="text-muted hover:text-danger">apagar</button>
               </div>
+              {confirmDelete && (
+                <ConfirmBar
+                  text={`Apagar o bloco "${block.title}"? Dá para desfazer pelo aviso de mudanças.`}
+                  confirmLabel="Apagar"
+                  busy={deleting}
+                  onConfirm={() => void remove()}
+                  onCancel={() => setConfirmDelete(false)}
+                />
+              )}
             </>
           )}
           {mode === "edit" && <EditBlock block={block} onDone={() => setMode("view")} />}
@@ -187,7 +203,7 @@ function EditBlock({ block, onDone }: { block: ContextBlock; onDone: () => void 
       setConflict({ content: r.current.content, version: r.current.version, message: r.message });
       setBase(r.current.version);
     } catch (x) {
-      setErr(String(x));
+      setErr(friendlyError(x));
     } finally {
       setBusy(false);
     }
@@ -248,7 +264,7 @@ function History({ block, data, now, onDone }: { block: ContextBlock; data: Data
       .eq("block_id", block.id)
       .order("version", { ascending: false })
       .limit(50)
-      .then(({ data: rows, error }) => (error ? setErr(error.message) : setVersions((rows ?? []) as ContextBlockVersion[])));
+      .then(({ data: rows, error }) => (error ? setErr(friendlyError(error)) : setVersions((rows ?? []) as ContextBlockVersion[])));
   }, [block.id, block.version]);
 
   async function restore(v: number) {
@@ -257,7 +273,7 @@ function History({ block, data, now, onDone }: { block: ContextBlock; data: Data
       const r = await rpc("context_restore", { p_block: block.id, p_version: v, p_base_version: block.version });
       if (!r.ok) setErr(r.message);
     } catch (x) {
-      setErr(String(x));
+      setErr(friendlyError(x));
     }
   }
 
@@ -300,7 +316,7 @@ function NewBlock({ workspaceId, onDone }: { workspaceId: string; onDone: () => 
       className="space-y-1 rounded-md border border-accent/50 bg-panel p-2"
       onSubmit={(e) => {
         e.preventDefault();
-        void rpc("context_create", { p_workspace: workspaceId, p_title: title, p_content: content }).then(onDone, (x) => setErr(String(x)));
+        void rpc("context_create", { p_workspace: workspaceId, p_title: title, p_content: content }).then(onDone, (x) => setErr(friendlyError(x)));
       }}
     >
       <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="Título (ex.: Contratos de API)" aria-label="Título do novo bloco" className="block w-full rounded-md border border-line bg-raised px-2 py-1 outline-none focus:border-accent" />
@@ -330,7 +346,7 @@ function PasteContext({ data, onDone }: { data: Data; onDone: () => void }) {
       for (const p of fresh) await rpc("context_create", { p_workspace: data.workspace!.id, p_title: p.title, p_content: p.content });
       onDone();
     } catch (x) {
-      setErr(String(x));
+      setErr(friendlyError(x));
     } finally {
       setBusy(false);
     }

@@ -71,7 +71,7 @@ export function Pill({
               <div className="mt-1 h-1 overflow-hidden rounded-full bg-raised">
                 <div className={`h-full rounded-full ${bar(pct)}`} style={{ width: `${Math.max(4, Math.min(100, pct))}%` }} />
               </div>
-              <div className="mt-0.5 text-[8.5px] leading-none text-muted">5 h</div>
+              <div className="mt-0.5 text-[10px] leading-none text-muted">5 h</div>
             </div>
           )}
           {rest.length > 0 && (

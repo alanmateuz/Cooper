@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { friendlyError } from "../lib/errors";
 import { inTauri } from "../lib/window";
 
 interface Plan {
@@ -27,7 +28,7 @@ export function ClaudeStatusLine({ autoRefresh, setAutoRefresh }: { autoRefresh:
       const { invoke } = await import("@tauri-apps/api/core");
       return await invoke<Plan>(cmd);
     } catch (e) {
-      setErr(String(e));
+      setErr(friendlyError(e));
       return null;
     } finally {
       setBusy(false);
@@ -99,7 +100,7 @@ export function ClaudeStatusLine({ autoRefresh, setAutoRefresh }: { autoRefresh:
         </div>
       )}
       {done && <p className="text-[10.5px] leading-snug text-run">{done}</p>}
-      {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
     </details>
   );
 }

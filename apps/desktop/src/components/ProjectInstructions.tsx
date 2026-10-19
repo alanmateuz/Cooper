@@ -1,5 +1,6 @@
 import { agentInstructionsMarkdown } from "@cooper/shared";
 import { useState } from "react";
+import { friendlyError } from "../lib/errors";
 import { inTauri } from "../lib/window";
 
 interface FilePlan {
@@ -36,7 +37,7 @@ export function ProjectInstructions() {
       const { invoke } = await import("@tauri-apps/api/core");
       return await invoke<T>(cmd, args);
     } catch (e) {
-      setErr(String(e));
+      setErr(friendlyError(e));
       return null;
     } finally {
       setBusy(false);
@@ -137,7 +138,7 @@ export function ProjectInstructions() {
           )}
         </div>
       )}
-      {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
     </details>
   );
 }

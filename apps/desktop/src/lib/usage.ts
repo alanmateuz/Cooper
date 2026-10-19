@@ -1,5 +1,6 @@
 import { localDay, usageRows, type UsageReport } from "@cooper/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { friendlyError } from "./errors";
 import { pref } from "./format";
 import { supabase } from "./supabase";
 import { inTauri } from "./window";
@@ -99,7 +100,7 @@ export function useShareUsage(report: UsageReport | null, workspaceId: string | 
         if (!error) last.current = key;
         setStatus({ at: new Date(), error: error?.message ?? null });
       } catch (e) {
-        setStatus({ at: new Date(), error: e instanceof Error ? e.message : String(e) });
+        setStatus({ at: new Date(), error: friendlyError(e) });
       } finally {
         sending.current = false;
       }

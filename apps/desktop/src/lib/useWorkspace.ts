@@ -11,6 +11,7 @@ import type {
   WorkspaceMember,
 } from "@cooper/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { friendlyError } from "./errors";
 import { distinctColors } from "./people";
 import { supabase } from "./supabase";
 
@@ -40,6 +41,13 @@ const EMPTY: WorkspaceData = {
   usage: [],
 };
 
+/** Resultado de uma consulta: as linhas, ou lança o erro (os loaders não engolem mais falhas). */
+async function fetchRows<T>(q: PromiseLike<{ data: unknown; error: unknown }>): Promise<T[]> {
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as T[];
+}
+
 type Table =
   | "tasks"
   | "agent_sessions"
@@ -60,52 +68,53 @@ export function useWorkspace(paused: boolean) {
   const [status, setStatus] = useState<"loading" | "ready" | "empty" | "error">("loading");
   const [realtime, setRealtime] = useState<"connecting" | "live" | "off">("connecting");
   const [error, setError] = useState<string | null>(null);
+  /** Falha ao atualizar uma tabela depois de carregado (rede, permissão): o widget mostra um aviso discreto. */
+  const [syncError, setSyncError] = useState<string | null>(null);
   const wsId = data.workspace?.id ?? null;
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
   const loaders: Record<Table, (id: string) => Promise<Partial<WorkspaceData>>> = {
     tasks: async (id) => ({
-      tasks: ((await supabase.from("tasks").select("*").eq("workspace_id", id).order("number")).data ?? []) as Task[],
+      tasks: await fetchRows<Task>(supabase.from("tasks").select("*").eq("workspace_id", id).order("number")),
     }),
     agent_sessions: async (id) => ({
-      sessions: ((await supabase
+      sessions: await fetchRows<AgentSession>(supabase
         .from("agent_sessions")
         .select("*")
         .eq("workspace_id", id)
         .order("last_event_at", { ascending: false, nullsFirst: false })
-        .limit(50)).data ?? []) as AgentSession[],
+        .limit(50)),
     }),
     git_snapshots: async (id) => ({
-      snapshots: ((await supabase.from("git_snapshots").select("*").eq("workspace_id", id)).data ?? []) as GitSnapshot[],
+      snapshots: await fetchRows<GitSnapshot>(supabase.from("git_snapshots").select("*").eq("workspace_id", id)),
     }),
     task_events: async (id) => ({
-      events: ((await supabase
+      events: await fetchRows<TaskEvent>(supabase
         .from("task_events")
         .select("*")
         .eq("workspace_id", id)
         .order("occurred_at", { ascending: false })
-        .limit(80)).data ?? []) as TaskEvent[],
+        .limit(80)),
     }),
     context_blocks: async (id) => ({
-      context: ((await supabase.from("context_blocks").select("*").eq("workspace_id", id).order("position")).data ??
-        []) as ContextBlock[],
+      context: await fetchRows<ContextBlock>(supabase.from("context_blocks").select("*").eq("workspace_id", id).order("position")),
     }),
     task_links: async (id) => ({
-      links: ((await supabase.from("task_links").select("*").eq("workspace_id", id)).data ?? []) as TaskLink[],
+      links: await fetchRows<TaskLink>(supabase.from("task_links").select("*").eq("workspace_id", id)),
     }),
     ai_usage: async (id) => ({
-      usage: ((await supabase.from("ai_usage").select("*").eq("workspace_id", id)).data ?? []) as AiUsageRow[],
+      usage: await fetchRows<AiUsageRow>(supabase.from("ai_usage").select("*").eq("workspace_id", id)),
     }),
     workspace_members: async (id) => {
-      const rows = ((await supabase.from("workspace_members").select("*").eq("workspace_id", id)).data ?? []) as WorkspaceMember[];
-      const profiles = ((await supabase
+      const rows = await fetchRows<WorkspaceMember>(supabase.from("workspace_members").select("*").eq("workspace_id", id));
+      const profiles = await fetchRows<Profile>(supabase
         .from("profiles")
         .select("*")
         .in(
           "id",
           rows.map((r) => r.user_id),
-        )).data ?? []) as Profile[];
+        ));
       // cor padrão igual para todos confundia as pessoas: cada uma ganha uma cor distinta no workspace
       const colors = distinctColors(rows.map((r) => ({ user_id: r.user_id, color: profiles.find((p) => p.id === r.user_id)?.avatar_color ?? null })));
       return {
@@ -119,8 +128,13 @@ export function useWorkspace(paused: boolean) {
 
   const reload = useCallback(
     async (table: Table, id: string) => {
-      const patch = await loaders[table](id);
-      setData((d) => (d.workspace?.id === id ? { ...d, ...patch } : d));
+      try {
+        const patch = await loaders[table](id);
+        setData((d) => (d.workspace?.id === id ? { ...d, ...patch } : d));
+        setSyncError(null);
+      } catch (e) {
+        setSyncError(friendlyError(e));
+      }
     },
     // loaders só dependem do cliente supabase (estável)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,7 +153,7 @@ export function useWorkspace(paused: boolean) {
         /* ignore */
       }
     } catch (e) {
-      setError(String(e));
+      setError(friendlyError(e));
       setStatus("error");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,7 +164,7 @@ export function useWorkspace(paused: boolean) {
     async (preferId?: string) => {
       const { data: rows, error: err } = await supabase.from("workspaces").select("*").order("created_at");
       if (err) {
-        setError(err.message);
+        setError(friendlyError(err));
         setStatus("error");
         return;
       }
@@ -190,5 +204,5 @@ export function useWorkspace(paused: boolean) {
     };
   }, [wsId, paused, reload]);
 
-  return { data, workspaces, status, realtime, error, selectWorkspace, loadWorkspaces, reload };
+  return { data, workspaces, status, realtime, error, syncError, selectWorkspace, loadWorkspaces, reload };
 }

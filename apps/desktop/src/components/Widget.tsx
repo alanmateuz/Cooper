@@ -14,7 +14,7 @@ import { ActivityTab } from "./ActivityTab";
 import { Empty, NotificationSettings, PrivacySection, SettingsSection, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
 import { ClaudeStatusLine } from "./ClaudeStatusLine";
-import { CreateWorkspace, MembersSection, Onboarding, PendingInvites } from "./Team";
+import { CreateWorkspace, MembersSection, Onboarding, PendingInvites, ProjectSection } from "./Team";
 import { awaitingForMe, TasksTab } from "./TasksTab";
 import { TeamCard } from "./TeamCard";
 import { Icon, IconButton, LogoMark } from "./ui";
@@ -42,7 +42,7 @@ export function Widget({
   setTheme: (t: "dark" | "light") => void;
 }) {
   const [paused, setPaused] = useState(false);
-  const { data, workspaces, status, realtime, error, selectWorkspace, loadWorkspaces, reload } = useWorkspace(paused);
+  const { data, workspaces, status, realtime, error, syncError, selectWorkspace, loadWorkspaces, reload } = useWorkspace(paused);
   const [tab, setTab] = useState<Tab>(() => pref<Tab>("tab", "now"));
   const [dim, setDimState] = useState(() => pref("dim", false));
   const [now, setNow] = useState(() => new Date());
@@ -145,6 +145,11 @@ export function Widget({
         )}
       </header>
 
+      {syncError && status === "ready" && (
+        <p className="shrink-0 border-b border-danger/30 bg-danger/10 px-2.5 py-1 text-[10.5px] leading-snug text-danger" role="status">
+          Não consegui atualizar: {syncError}
+        </p>
+      )}
       <main className="relative min-h-0 flex-1 overflow-hidden">
         {status === "loading" && <Empty>Carregando…</Empty>}
         {status === "error" && <Empty>Erro ao carregar: {error}</Empty>}
@@ -196,6 +201,9 @@ export function Widget({
                   <MembersSection data={data} me={session.user.id} now={now} onProfileChange={() => void reload("workspace_members", data.workspace!.id)} />
                   <PendingInvites onAccepted={(id) => void loadWorkspaces(id)} />
                 </SettingsSection>
+                <SettingsSection title="Projeto">
+                  <ProjectSection data={data} me={session.user.id} onChanged={(keepId) => void loadWorkspaces(keepId)} />
+                </SettingsSection>
                 <SettingsSection title="Uso de IA">
                   <PrivacySection workspaceId={data.workspace.id} sharing={sharing} status={shareStatus} />
                   <ClaudeStatusLine autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh} />
@@ -231,9 +239,9 @@ export function Widget({
               className={`relative my-1 flex flex-1 flex-col items-center justify-center gap-0.5 rounded-md ${tab === t.id ? "bg-raised text-accent" : "text-muted hover:text-text"}`}
             >
               <Icon name={t.icon} size={14} />
-              <span className="text-[9.5px] leading-none">{t.label === "Configurações" ? "Ajustes" : t.label}</span>
+              <span className="text-[10px] leading-none">{t.label === "Configurações" ? "Ajustes" : t.label}</span>
               {t.id === "tasks" && awaiting.length > 0 && (
-                <span className="absolute top-0.5 right-[calc(50%-17px)] min-w-3.5 rounded-full bg-accent px-0.5 text-center text-[9px] leading-3.5 font-semibold text-white" aria-label={`${awaiting.length} aguardando aceite`}>
+                <span className="absolute top-0.5 right-[calc(50%-17px)] min-w-3.5 rounded-full bg-accent px-0.5 text-center text-[10px] leading-3.5 font-semibold text-white" aria-label={`${awaiting.length} aguardando aceite`}>
                   {awaiting.length}
                 </span>
               )}

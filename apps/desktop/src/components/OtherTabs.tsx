@@ -1,5 +1,6 @@
 import type { Workspace } from "@cooper/shared";
 import { useState } from "react";
+import { friendlyError } from "../lib/errors";
 import { clearServerConfig, serverHost } from "../lib/config";
 import { serverConfig, supabase } from "../lib/supabase";
 import { CRITICAL_USAGE_PCT } from "../lib/notifications";
@@ -211,7 +212,7 @@ export function PrivacySection({ workspaceId, sharing, status }: { workspaceId: 
     setErr(null);
     const { error } = await supabase.rpc("set_usage_sharing", { p_workspace: workspaceId, p_on: on });
     setBusy(false);
-    if (error) setErr(error.message);
+    if (error) setErr(friendlyError(error));
   }
   return (
     <section className="space-y-1">

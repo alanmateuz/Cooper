@@ -52,7 +52,7 @@ export function Avatar({ name, color, status, size = 24 }: { name: string; color
 export function SourceBadge({ source, label }: { source: EventSource | "ai_summary"; label?: string }) {
   const text = label ?? (source === "ai_summary" ? "resumo IA" : SOURCE_LABELS[source]);
   return (
-    <span className="shrink-0 rounded border border-line px-1 py-px text-[9.5px] leading-none whitespace-nowrap text-muted" title={`origem: ${text}`}>
+    <span className="shrink-0 rounded border border-line px-1 py-px text-[10px] leading-none whitespace-nowrap text-muted" title={`origem: ${text}`}>
       {text}
     </span>
   );
@@ -90,10 +90,13 @@ const PATHS = {
   trash: "M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m5 5v6m4-6v6",
   check: "M20 6 9 17l-5-5",
   play: "M7 4.5v15l12-7.5-12-7.5Z",
+  edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z",
   gauge: "M12 14l3.5-3.5M3.3 17a9 9 0 1 1 17.4 0",
 } as const;
 
-export function Icon({ name, size = 14 }: { name: keyof typeof PATHS; size?: number }) {
+export type IconName = keyof typeof PATHS;
+
+export function Icon({ name, size = 14 }: { name: IconName; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d={PATHS[name]} />
@@ -118,5 +121,49 @@ export function LogoMark({ height = 14, bg = "var(--bg)" }: { height?: number; b
       <path d={LOGO_LIGHT_FRONT} stroke={bg} strokeWidth={108} strokeLinecap="butt" />
       <path d={LOGO_LIGHT_FRONT} stroke="var(--logo-b)" strokeWidth={88} />
     </svg>
+  );
+}
+
+/**
+ * Confirmação na própria tela (no lugar do confirm() nativo): faixa com o texto e dois botões.
+ * `children`: conteúdo extra (ex.: campo para digitar o nome do projeto).
+ */
+export function ConfirmBar({
+  text,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+  busy,
+  disabled,
+  error,
+  tone = "danger",
+  children,
+}: {
+  text: ReactNode;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  busy?: boolean;
+  disabled?: boolean;
+  error?: string | null;
+  tone?: "danger" | "warn";
+  children?: ReactNode;
+}) {
+  const box = tone === "danger" ? "border-danger/30 bg-danger/10" : "border-warn/30 bg-warn/10";
+  const btn = tone === "danger" ? "bg-danger" : "bg-warn";
+  return (
+    <div className={`space-y-1.5 rounded-lg border px-2.5 py-2 ${box}`} role="alert">
+      <p className="leading-snug">{text}</p>
+      {children}
+      <div className="flex justify-end gap-1.5">
+        <button type="button" onClick={onCancel} className="rounded-md px-2 py-0.5 text-muted hover:text-text">
+          Cancelar
+        </button>
+        <button type="button" disabled={busy || disabled} onClick={onConfirm} className={`rounded-md px-2 py-0.5 font-medium text-white disabled:opacity-40 ${btn}`}>
+          {busy ? "Aguarde…" : confirmLabel}
+        </button>
+      </div>
+      {error && <p className="text-[10.5px] text-danger">{error}</p>}
+    </div>
   );
 }

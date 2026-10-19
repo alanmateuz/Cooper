@@ -1,8 +1,11 @@
 import { AGENT_KINDS, AGENT_LABELS, type AgentKind } from "@cooper/shared";
 import { useCallback, useEffect, useState } from "react";
+import { revokeAgentConnection } from "../lib/api";
+import { friendlyError } from "../lib/errors";
 import { timeAgo } from "../lib/format";
 import { serverConfig, supabase } from "../lib/supabase";
 import { inTauri } from "../lib/window";
+import { ConfirmBar } from "./ui";
 
 interface Connection {
   id: string;
@@ -52,7 +55,7 @@ export function AgentsSection({ workspaceId, now }: { workspaceId: string; now: 
   async function create() {
     setErr(null);
     const { data, error } = await supabase.rpc("create_agent_token", { p_workspace: workspaceId, p_kind: kind, p_label: "widget" });
-    if (error) return setErr(error.message);
+    if (error) return setErr(friendlyError(error));
     setCreated({ id: data.id, token: data.token, kind });
     setCopied(false);
     setConnected(null);
@@ -86,15 +89,25 @@ export function AgentsSection({ workspaceId, now }: { workspaceId: string; now: 
       setConnected(r);
       void load();
     } catch (e) {
-      setErr(String(e));
+      setErr(friendlyError(e));
     } finally {
       setBusy(false);
     }
   }
 
-  async function revoke(id: string) {
-    await supabase.from("agent_connections").update({ revoked_at: new Date().toISOString() }).eq("id", id);
-    void load();
+  const [revoking, setRevoking] = useState<Connection | null>(null);
+  const [revokeBusy, setRevokeBusy] = useState(false);
+  async function revoke(c: Connection) {
+    setRevokeBusy(true);
+    setErr(null);
+    try {
+      const error = await revokeAgentConnection(c.id);
+      if (error) return setErr(error);
+      setRevoking(null);
+      void load();
+    } finally {
+      setRevokeBusy(false);
+    }
   }
 
   // Caminho do servidor MCP que vem dentro do app instalado (recurso do Tauri).
@@ -131,7 +144,7 @@ export function AgentsSection({ workspaceId, now }: { workspaceId: string; now: 
           </button>
         </div>
       </div>
-      {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
 
       {created && (
         <div className="space-y-1.5 rounded-md border border-accent/50 bg-raised p-2">
@@ -185,11 +198,20 @@ export function AgentsSection({ workspaceId, now }: { workspaceId: string; now: 
           <span className="w-20 shrink-0">{AGENT_LABELS[c.agent_kind]}</span>
           <code className="text-muted">{c.token_prefix}…</code>
           <span className="flex-1 truncate text-muted">{c.last_used_at ? `usado ${timeAgo(c.last_used_at, now)}` : "nunca usado"}</span>
-          <button type="button" onClick={() => void revoke(c.id)} className="text-muted hover:text-red-400">
+          <button type="button" onClick={() => setRevoking(c)} className="text-muted hover:text-danger">
             revogar
           </button>
         </div>
       ))}
+      {revoking && (
+        <ConfirmBar
+          text={`Revogar o token ${revoking.token_prefix}… do ${AGENT_LABELS[revoking.agent_kind]}? O agente que usa esse token para de acessar o Cooper na hora.`}
+          confirmLabel="Revogar"
+          busy={revokeBusy}
+          onCancel={() => setRevoking(null)}
+          onConfirm={() => void revoke(revoking)}
+        />
+      )}
     </section>
   );
 }

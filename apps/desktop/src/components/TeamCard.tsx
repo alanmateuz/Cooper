@@ -1,5 +1,6 @@
 import { AGENT_LABELS, LIMIT_STALE_MS, PRESENCE_LABELS, type AgentKind, type UsageView } from "@cooper/shared";
 import { useState } from "react";
+import { friendlyError } from "../lib/errors";
 import { shortSha, timeAgo } from "../lib/format";
 import type { PersonView } from "../lib/people";
 import { Avatar, Icon, SourceBadge } from "./ui";
@@ -177,7 +178,7 @@ function AgentUsage({ u, now, isMe, onRefresh }: { u: UsageView | null; now: Dat
                 setBusy(true);
                 setErr(null);
                 onRefresh()
-                  .catch((e) => setErr(String(e)))
+                  .catch((e) => setErr(friendlyError(e)))
                   .finally(() => setBusy(false));
               }}
               className="ml-auto rounded px-1 text-accent hover:bg-raised disabled:opacity-50"
@@ -205,7 +206,7 @@ function Meter({ label, pct, reset }: { label: string; pct: number; reset: strin
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-raised" role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`limite ${label}`}>
         <div className={`h-full rounded-full ${BAR[t]}`} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} />
       </div>
-      <div className="mt-1 truncate text-[9.5px] leading-none text-muted">reinicia {reset}</div>
+      <div className="mt-1 truncate text-[10px] leading-none text-muted">reinicia {reset}</div>
     </div>
   );
 }

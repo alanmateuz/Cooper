@@ -1,6 +1,7 @@
 import { AGENT_LABELS, viewsFromRows, type Task, type TaskEvent } from "@cooper/shared";
 import { useEffect, useRef, useState } from "react";
 import { pref, setPref } from "./format";
+import { memberFirstName } from "./names";
 import { playChime } from "./sound";
 import type { WorkspaceData } from "./useWorkspace";
 
@@ -20,8 +21,7 @@ export interface CooperNotification {
   taskId?: string;
 }
 
-const firstName = (d: WorkspaceData, id: string | null) =>
-  d.members.find((m) => m.user_id === id)?.profile?.display_name.replace(/\s*\(.*\)/, "").split(" ")[0] ?? "Alguém";
+const firstName = (d: WorkspaceData, id: string | null) => memberFirstName(d, id);
 
 function fromEvent(e: TaskEvent, task: Task | undefined, d: WorkspaceData, me: string): Omit<CooperNotification, "id" | "at"> | null {
   if (!task || e.user_id === me) return null;
@@ -32,6 +32,9 @@ function fromEvent(e: TaskEvent, task: Task | undefined, d: WorkspaceData, me: s
   const received = { kind: "task_received" as const, text: `${who} te enviou uma tarefa`, detail: label, taskId: task.id };
   if (e.type === "task_created" && p.assignee_id === me && to === "awaiting_acceptance") return received;
   if (e.type === "task_sent" && p.assignee_id === me) return received;
+  // prompt mudou numa tarefa que eu já tinha aceitado: preciso aceitar de novo
+  if (e.type === "task_edited" && p.reaccept && task.assignee_id === me)
+    return { ...received, text: `${who} mudou o prompt de uma tarefa`, detail: `${label} · aceite de novo para continuar` };
   if (e.type !== "status_changed") return null;
   if (p.from_status === "declined" && to === "awaiting_acceptance" && task.assignee_id === me) return { ...received, text: `${who} reenviou uma tarefa` };
   if (to === "done") return { kind: "task_done", text: `${who} concluiu uma tarefa`, detail: label, taskId: task.id };
