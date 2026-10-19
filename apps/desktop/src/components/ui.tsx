@@ -100,3 +100,23 @@ export function Icon({ name, size = 14 }: { name: keyof typeof PATHS; size?: num
     </svg>
   );
 }
+
+const LOGO_LIGHT = "M500 239 L511.5 239 A102.5 102.5 0 0 1 511.5 444 L470 444 A102.5 102.5 0 0 1 367.5 341.5 L367.5 322";
+const LOGO_LIGHT_FRONT = "M470 444 A102.5 102.5 0 0 1 367.5 341.5 L367.5 322";
+const LOGO_DARK = "M446 232 Q432 194 398 194 L314 194 A125.5 125.5 0 0 0 314 445 L348 445";
+
+/**
+ * Símbolo da logo (os dois "C" entrelaçados). As cores vêm do tema (--logo-a, --logo-b);
+ * `bg` é a cor do fundo onde ele aparece, usada para o vão entre os dois C.
+ */
+export function LogoMark({ height = 14, bg = "var(--bg)" }: { height?: number; bg?: string }) {
+  return (
+    <svg height={height} width={Math.round((height * 530) / 355)} viewBox="135 140 530 355" fill="none" strokeLinecap="round" strokeLinejoin="round" aria-label="Cooper" role="img">
+      <path d={LOGO_LIGHT} stroke="var(--logo-b)" strokeWidth={88} />
+      <path d={LOGO_DARK} stroke={bg} strokeWidth={117} />
+      <path d={LOGO_DARK} stroke="var(--logo-a)" strokeWidth={97} />
+      <path d={LOGO_LIGHT_FRONT} stroke={bg} strokeWidth={108} strokeLinecap="butt" />
+      <path d={LOGO_LIGHT_FRONT} stroke="var(--logo-b)" strokeWidth={88} />
+    </svg>
+  );
+}

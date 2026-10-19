@@ -15,6 +15,9 @@
   --idle: #9ca3af;
   --warn: #f59e0b;
   --danger: #f87171;
+  /* logo: o roxo escuro da marca some no fundo escuro, então clareia no tema escuro */
+  --logo-a: #8b5cf6;
+  --logo-b: #c77bf9;
   color-scheme: dark;
 }
 [data-theme="light"] {
@@ -27,6 +30,8 @@
   --accent: #5359e6;
   --warn: #d97706;
   --danger: #dc2626;
+  --logo-a: #4a03b5;
+  --logo-b: #c77bf9;
   color-scheme: light;
 }
 

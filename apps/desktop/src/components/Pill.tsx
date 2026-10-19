@@ -1,7 +1,7 @@
 import { AGENT_LABELS, PRESENCE_LABELS, type UsageView } from "@cooper/shared";
 import type { PersonView } from "../lib/people";
 import { dragFromMouseDown } from "../lib/window";
-import { Avatar, Icon } from "./ui";
+import { Avatar, Icon, LogoMark } from "./ui";
 
 /** Maior uso de 5 h entre os agentes da pessoa (é o que acaba primeiro). */
 function fiveHour(usage: UsageView[]): number | null {
@@ -86,7 +86,7 @@ export function Pill({
         </>
       ) : (
         <span className="flex-1 pl-1.5 text-[11px] text-muted">
-          <span className="mr-1.5 text-[10px] font-bold tracking-wider text-accent">CO</span>Só você neste workspace
+          <span className="mr-1.5 inline-flex align-middle"><LogoMark height={11} bg="var(--panel)" /></span>Só você neste workspace
         </span>
       )}
       {awaiting > 0 && (

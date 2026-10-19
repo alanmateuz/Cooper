@@ -17,7 +17,7 @@ import { ClaudeStatusLine } from "./ClaudeStatusLine";
 import { CreateWorkspace, MembersSection, Onboarding, PendingInvites } from "./Team";
 import { awaitingForMe, TasksTab } from "./TasksTab";
 import { TeamCard } from "./TeamCard";
-import { Icon, IconButton } from "./ui";
+import { Icon, IconButton, LogoMark } from "./ui";
 
 type Tab = "now" | "tasks" | "context" | "activity" | "settings";
 const TABS: { id: Tab; label: string; icon: Parameters<typeof Icon>[0]["name"] }[] = [
@@ -123,9 +123,7 @@ export function Widget({
   return (
     <div className={`flex h-full flex-col overflow-hidden rounded-xl border border-line bg-bg shadow-2xl transition-opacity ${dim ? "opacity-60 hover:opacity-100" : ""}`}>
       <header onMouseDown={dragFromMouseDown} className="flex h-9 shrink-0 cursor-default items-center gap-1.5 border-b border-line px-2.5">
-        <span className="text-[10px] font-bold tracking-wider text-accent">
-          CO
-        </span>
+        <LogoMark height={13} />
         <span className="flex min-w-0 flex-1 items-center gap-1.5">
           <span className="truncate font-semibold">{data.workspace?.name ?? "Cooper"}</span>
           <span
