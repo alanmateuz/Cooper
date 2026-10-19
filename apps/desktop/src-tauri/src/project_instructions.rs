@@ -1,4 +1,4 @@
-//! Grava as regras do Cooper em CLAUDE.md (Claude Code) e AGENTS.md (Codex) na raiz de um repositório.
+//! Grava o trecho do Cooper (lembrete curto; as regras vêm do servidor MCP) em CLAUDE.md e AGENTS.md na raiz de um repositório.
 //! Duas etapas: `preview_agent_instructions` diz o que vai acontecer com cada arquivo, sem tocar em nada;
 //! `write_agent_instructions` só roda depois que a pessoa confirma no widget.
 //! O trecho fica entre marcadores; gravar de novo substitui só o trecho e preserva o resto do arquivo.

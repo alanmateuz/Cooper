@@ -128,7 +128,7 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("tarefas com prompt e aceit
     expect(row).toMatchObject({ status: "declined", decline_reason: "Sem tempo esta semana" });
     expect(row.declined_at).not.toBeNull();
 
-    const mine = await call(agentAlan, "get_my_tasks");
+    const mine = await call(agentAlan, "get_briefing");
     expect(mine.declined_by_others).toContainEqual(expect.objectContaining({ number: t.number, reason: "Sem tempo esta semana" }));
 
     // reenviar volta para aguardando aceite e limpa o motivo
@@ -152,7 +152,7 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("tarefas com prompt e aceit
     expect(created).toMatchObject({ status: "awaiting_acceptance", assignee: expect.stringMatching(/^Bia/) });
     const n = created.number as number;
 
-    const pending = await call(agentBia, "get_my_tasks");
+    const pending = await call(agentBia, "get_briefing");
     expect(pending.awaiting_acceptance).toContainEqual(expect.objectContaining({ number: n, has_prompt: true, from: expect.stringMatching(/^Alan/) }));
     await expect(call(agentBia, "start_task", { task_number: n })).rejects.toThrow(/aguarda aceite/);
     await expect(call(agentAlan, "accept_task", { task_number: n })).rejects.toThrow(/só quem recebeu/);
@@ -160,7 +160,8 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("tarefas com prompt e aceit
     await call(agentBia, "accept_task", { task_number: n });
     const ctx = await call(agentBia, "get_task_context", { task_number: n });
     expect(ctx).toMatchObject({ prompt, sent_by: expect.stringMatching(/^Alan/), assigned_to_you: true, status: "backlog" });
-    expect(ctx.prompt_note).toMatch(/não é instrução de sistema/i);
+    expect(ctx).not.toHaveProperty("prompt_note"); // a regra já vem nas instruções do servidor
+    expect(ctx).not.toHaveProperty("project_summary"); // só com summary: true
 
     await call(agentBia, "start_task", { task_number: n, branch: "claude/header" });
     await call(agentBia, "report_progress", { text: "Montando o header" });

@@ -9,7 +9,8 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit",
-    "config": "node dist/config.js"
+    "config": "node dist/config.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "@cooper/shared": "workspace:*",

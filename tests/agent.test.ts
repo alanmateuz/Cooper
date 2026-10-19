@@ -121,16 +121,16 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("MCP de ponta a ponta: dois
     const { tools } = await codexAlan.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
       [
-        "get_my_tasks", "get_task_context", "get_team_status", "get_workspace_context", "report_progress", "start_task",
+        "get_briefing", "get_task_context", "get_workspace_context", "report_progress", "start_task",
         "create_task", "accept_task", "decline_task", "complete_task",
-        "update_context_block", "create_context_block",
+        "update_context_block", "create_context_block", "patch_context_block",
       ].sort(),
     );
   });
 
   it("critério 3: um cliente consulta suas tarefas", async () => {
-    const mine = await call(codexAlan, "get_my_tasks");
-    expect(mine.tasks.some((t: { number: number }) => t.number === 1)).toBe(true);
+    const mine = await call(codexAlan, "get_briefing");
+    expect((mine.tasks ?? []).some((t: { number: number }) => t.number === 1)).toBe(true);
     const ctx = await call(codexAlan, "get_task_context", { task_number: 1 });
     expect(ctx.acceptance_criteria).toMatch(/QR/);
   });
@@ -159,9 +159,9 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("MCP de ponta a ponta: dois
     await call(codexAlan, "start_task", { task_number: 1, branch: "codex/qrcode-inscricao" });
     await call(codexAlan, "report_progress", { text, files: ["lib/qr/validate.ts"], tests: { command: "pnpm test qr", passed: true } });
 
-    const team = await call(claudeBia, "get_team_status");
+    const { team } = await call(claudeBia, "get_briefing");
     const alan = team.find((p: { name: string }) => p.name.startsWith("Alan"));
-    expect(alan.sessions.some((s: { activity: string; agent: string }) => s.activity === text && s.agent === "codex")).toBe(true);
+    expect(alan).toMatchObject({ agent: "codex", activity: text });
 
     expect(await seen).toBe(text);
 
@@ -175,7 +175,7 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("MCP de ponta a ponta: dois
 
   it("ferramenta com tarefa inexistente retorna erro legível, sem derrubar o servidor", async () => {
     await expect(call(claudeBia, "get_task_context", { task_number: 9999 })).rejects.toThrow(/não existe/);
-    const mine = await call(claudeBia, "get_my_tasks");
-    expect(Array.isArray(mine.awaiting_acceptance) && Array.isArray(mine.tasks)).toBe(true);
+    const briefing = await call(claudeBia, "get_briefing");
+    expect(typeof briefing).toBe("object");
   });
 });

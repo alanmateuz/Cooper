@@ -63,8 +63,8 @@ export function ProjectInstructions() {
     <details className="space-y-1.5">
       <summary className="cursor-pointer font-medium">Regras para os agentes</summary>
       <p className="pt-1 text-[10.5px] leading-snug text-muted">
-        O servidor MCP já envia estas regras aos agentes. Para garantir, grave também no <code>CLAUDE.md</code> (Claude Code) e no{" "}
-        <code>AGENTS.md</code> (Codex) do repositório.
+        As regras chegam aos agentes pelo servidor MCP. Este trecho curto no <code>CLAUDE.md</code> (Claude Code) e no <code>AGENTS.md</code>{" "}
+        (Codex) só lembra o agente de começar pelo Cooper, sem repetir as regras.
       </p>
       <pre className="max-h-32 overflow-y-auto rounded bg-raised p-1.5 text-[10px] leading-snug whitespace-pre-wrap select-text">{block}</pre>
       <button
