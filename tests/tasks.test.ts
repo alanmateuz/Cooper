@@ -210,4 +210,27 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("tarefas com prompt e aceit
     const foreign = await alan.c.from("tasks").update({ assignee_id: intruso.id }).eq("id", t.id);
     expect(foreign.error?.message).toMatch(/não é membro/);
   });
+
+  it("excluir: dono, autor ou responsável apaga em qualquer status; outros não; fica o evento", async () => {
+    const exists = async (id: string) => ((await alan.c.from("tasks").select("id").eq("id", id)).data ?? []).length === 1;
+
+    // a Bia (membro) apaga a tarefa que recebeu, mesmo concluída
+    const received = await send({ title: `${tag()} recebida`, assignee_id: bia.id });
+    await bia.c.from("tasks").update({ status: "backlog" }).eq("id", received.id);
+    await bia.c.from("tasks").update({ status: "done" }).eq("id", received.id);
+    expect((await bia.c.from("tasks").delete().eq("id", received.id).select()).data).toHaveLength(1);
+    expect(await exists(received.id)).toBe(false);
+    const ev = await alan.c.from("task_events").select("type,payload,user_id").eq("workspace_id", ws).eq("type", "task_deleted")
+      .order("occurred_at", { ascending: false }).limit(1).single();
+    expect(ev.data).toMatchObject({ user_id: bia.id, payload: { number: received.number, title: received.title } });
+
+    // a Bia não apaga tarefa do Alan para o próprio Alan; o intruso não apaga nada
+    const alans = await send({ title: `${tag()} do Alan` });
+    expect((await bia.c.from("tasks").delete().eq("id", alans.id).select()).data ?? []).toEqual([]);
+    expect((await intruso.c.from("tasks").delete().eq("id", alans.id).select()).data ?? []).toEqual([]);
+    expect(await exists(alans.id)).toBe(true);
+
+    // o dono apaga qualquer uma, inclusive no backlog
+    expect((await alan.c.from("tasks").delete().eq("id", alans.id).select()).data).toHaveLength(1);
+  });
 });
