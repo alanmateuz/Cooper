@@ -12,7 +12,10 @@ export const PRESENCE_DEFAULTS = {
 export const EXECUTION_EVENT_TYPES = new Set(["user_prompt_submit", "pre_tool_use", "post_tool_use"]);
 
 export interface SessionEvidence {
-  /** Só sessões com hooks configurados produzem evidência observada. */
+  /**
+   * Com hooks, a sessão pode chegar a "Executando". Sem hooks, a única evidência
+   * é a última chamada de ferramenta do Cooper: no máximo "Online".
+   */
   hasHooks: boolean;
   startedAt: string | null;
   endedAt: string | null;
@@ -22,15 +25,14 @@ export interface SessionEvidence {
 
 /**
  * Status de presença derivado só de evidência.
- * Nunca retorna "running" por existir branch ou tarefa em andamento.
+ * Nunca retorna "running" por existir branch ou tarefa em andamento, nem sem hooks.
  */
 export function computePresence(
   s: SessionEvidence,
   now: Date = new Date(),
   limits: { runningWindowMs: number; onlineWindowMs: number } = PRESENCE_DEFAULTS,
 ): PresenceStatus {
-  if (!s.hasHooks) return "unknown";
-  if (!s.lastEventAt) return s.startedAt ? "idle" : "unknown";
+  if (!s.lastEventAt) return s.hasHooks && s.startedAt ? "idle" : "unknown";
 
   const age = now.getTime() - new Date(s.lastEventAt).getTime();
   if (Number.isNaN(age)) return "unknown";
@@ -40,7 +42,7 @@ export function computePresence(
   const ended = s.endedAt !== null && new Date(s.endedAt).getTime() >= new Date(s.lastEventAt).getTime();
   if (ended) return "idle";
 
-  if (ageMs <= limits.runningWindowMs && s.lastEventType && EXECUTION_EVENT_TYPES.has(s.lastEventType)) {
+  if (s.hasHooks && ageMs <= limits.runningWindowMs && s.lastEventType && EXECUTION_EVENT_TYPES.has(s.lastEventType)) {
     return "running";
   }
   if (ageMs <= limits.onlineWindowMs) return "online";

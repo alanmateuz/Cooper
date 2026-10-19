@@ -21,7 +21,7 @@ export function StatusDot({ status, size = 8 }: { status: PresenceStatus; size?:
 }
 
 /**
- * Avatar com selo de presença. "Desconhecido" (sem hooks, sem evidência) não ganha selo:
+ * Avatar com selo de presença. "Desconhecido" (nenhuma chamada ao Cooper) não ganha selo:
  * um círculo vazio não informa nada e parecia uma mancha no avatar.
  * O anel do selo usa a cor do fundo (--panel) para separar o ponto da foto.
  */

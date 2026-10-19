@@ -12,8 +12,18 @@ const base: SessionEvidence = {
 };
 
 describe("computePresence", () => {
-  it("sem hooks é desconhecido, mesmo com evento recente", () => {
-    expect(computePresence({ ...base, hasHooks: false, lastEventAt: ago(1000), lastEventType: "post_tool_use" }, now)).toBe("unknown");
+  it("sem hooks, chamada recente ao Cooper é online, nunca executando", () => {
+    expect(computePresence({ ...base, hasHooks: false, lastEventAt: ago(1000), lastEventType: "post_tool_use" }, now)).toBe("online");
+    expect(computePresence({ ...base, hasHooks: false, lastEventAt: ago(1000), lastEventType: "get_my_tasks" }, now)).toBe("online");
+  });
+
+  it("sem hooks, chamada antiga ou sessão encerrada é inativo", () => {
+    expect(computePresence({ ...base, hasHooks: false, lastEventAt: ago(31 * 60_000), lastEventType: "get_my_tasks" }, now)).toBe("idle");
+    expect(computePresence({ ...base, hasHooks: false, lastEventAt: ago(30_000), lastEventType: "get_my_tasks", endedAt: ago(10_000) }, now)).toBe("idle");
+  });
+
+  it("sem hooks e sem nenhuma chamada é desconhecido", () => {
+    expect(computePresence({ ...base, hasHooks: false }, now)).toBe("unknown");
   });
 
   it("evento de execução recente é executando", () => {
