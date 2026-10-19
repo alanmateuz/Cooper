@@ -7,7 +7,7 @@ import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, type WidgetMode } 
 import { ActivityTab, ContextTab, Empty, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
 import { CreateWorkspace, MembersSection, Onboarding, PendingInvites } from "./Team";
-import { TasksTab } from "./TasksTab";
+import { awaitingForMe, TasksTab } from "./TasksTab";
 import { TeamCard } from "./TeamCard";
 import { Icon, IconButton } from "./ui";
 
@@ -59,6 +59,7 @@ export function Widget({
 
   const people = useMemo(() => buildPeople(data, now), [data, now]);
   const alerts = 0; // regras de conflito: Fase 4
+  const awaiting = useMemo(() => awaitingForMe(data, session.user.id), [data, session.user.id]);
 
   if (mode === "pill") return <Pill people={people} alerts={alerts} onExpand={() => setMode("compact")} />;
 
@@ -99,6 +100,22 @@ export function Widget({
             {showTab === "now" && (
               <div className="h-full space-y-1.5 overflow-y-auto p-2">
                 {/* alertas de conflito entram aqui (Fase 4) */}
+                {awaiting.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTab("tasks");
+                      setMode("expanded");
+                    }}
+                    className="flex w-full items-center gap-1.5 rounded-lg border border-accent/50 bg-panel px-2.5 py-1.5 text-left hover:bg-raised"
+                  >
+                    <Icon name="list" size={12} />
+                    <span className="min-w-0 flex-1 truncate">
+                      {awaiting.length === 1 ? `Tarefa nova: #${awaiting[0]!.number} ${awaiting[0]!.title}` : `${awaiting.length} tarefas aguardando seu aceite`}
+                    </span>
+                    <span className="shrink-0 text-[10.5px] text-accent">ver</span>
+                  </button>
+                )}
                 {people.map((p) => (
                   <TeamCard key={p.userId} p={p} now={now} isMe={p.userId === session.user.id} />
                 ))}
@@ -144,9 +161,14 @@ export function Widget({
               aria-label={t.label}
               aria-current={tab === t.id}
               onClick={() => setTab(t.id)}
-              className={`flex h-7 w-10 items-center justify-center rounded-md ${tab === t.id ? "bg-raised text-accent" : "text-muted hover:text-text"}`}
+              className={`relative flex h-7 w-10 items-center justify-center rounded-md ${tab === t.id ? "bg-raised text-accent" : "text-muted hover:text-text"}`}
             >
               <Icon name={t.icon} size={15} />
+              {t.id === "tasks" && awaiting.length > 0 && (
+                <span className="absolute top-0 right-1 min-w-3.5 rounded-full bg-accent px-0.5 text-[9px] leading-3.5 font-semibold text-white" aria-label={`${awaiting.length} aguardando aceite`}>
+                  {awaiting.length}
+                </span>
+              )}
             </button>
           ))}
         </nav>

@@ -4,6 +4,8 @@ import { timeAgo } from "../lib/format";
 import { supabase } from "../lib/supabase";
 import type { WorkspaceData } from "../lib/useWorkspace";
 import { AgentsSection } from "./AgentsSection";
+import { ProjectInstructions } from "./ProjectInstructions";
+import { describeEvent } from "./TasksTab";
 import { Icon, SourceBadge } from "./ui";
 
 const KIND_LABEL = { summary: "Resumo", architecture: "Arquitetura", convention: "Convenção" } as const;
@@ -50,7 +52,7 @@ export function ActivityTab({ data, now }: { data: WorkspaceData; now: Date }) {
               <div className="truncate">
                 <span className="font-medium">{name(e.user_id)}</span>
                 {session && <span className="text-muted"> · {AGENT_LABELS[session.agent_kind]}</span>}
-                <span className="text-muted"> · {describe(e.type, e.payload)}</span>
+                <span className="text-muted"> · {describeEvent(e.type, e.payload, name)}</span>
               </div>
               {t && <div className="truncate text-[10.5px] text-muted">#{t.number} {t.title}</div>}
             </div>
@@ -60,23 +62,6 @@ export function ActivityTab({ data, now }: { data: WorkspaceData; now: Date }) {
       })}
     </ol>
   );
-}
-
-function describe(type: string, p: Record<string, unknown>): string {
-  switch (type) {
-    case "start_task":
-      return `iniciou tarefa${p.branch ? ` em ${p.branch}` : ""}`;
-    case "report_progress":
-      return String(p.text ?? "progresso");
-    case "status_changed":
-      return `status ${p.from_status} → ${p.to_status}`;
-    case "git_snapshot":
-      return `git: ${p.branch ?? "?"}${p.commit ? ` @ ${p.commit}` : ""}`;
-    case "post_tool_use":
-      return `usou ${p.tool_name ?? "ferramenta"}`;
-    default:
-      return type.replaceAll("_", " ");
-  }
 }
 
 export function SettingsTab({
@@ -130,7 +115,8 @@ export function SettingsTab({
       </Row>
       {children}
       <AgentsSection workspaceId={workspace.id} now={now} />
-      <p className="text-[10.5px] leading-snug text-muted">Repositório, hooks e convites entram nas Fases 3 e 4.</p>
+      <ProjectInstructions />
+      <p className="text-[10.5px] leading-snug text-muted">Repositório e hooks entram nas etapas de git e hooks.</p>
       <button type="button" onClick={() => void supabase.auth.signOut()} className="rounded-md border border-line px-2 py-1 hover:bg-raised">
         Sair
       </button>

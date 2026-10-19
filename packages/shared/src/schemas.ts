@@ -6,6 +6,9 @@ export const taskStatusSchema = z.enum(TASK_STATUSES);
 export const agentKindSchema = z.enum(AGENT_KINDS);
 export const taskLinkKindSchema = z.enum(TASK_LINK_KINDS);
 
+/** Motivo de recusa: obrigatório e curto. */
+export const declineReasonSchema = z.string().trim().min(1).max(500);
+
 /** Texto curto de progresso: o widget e o MCP limitam a 120 caracteres. */
 export const progressTextSchema = z.string().trim().min(1).max(120);
 
@@ -13,6 +16,8 @@ export const createTaskInputSchema = z.object({
   workspace_id: z.string().uuid(),
   title: z.string().trim().min(1).max(200),
   description: z.string().max(5000).optional(),
+  prompt: z.string().trim().max(20000).optional().transform((v) => v || undefined),
+  assignee_id: z.string().uuid().nullable().optional(),
 });
 export type CreateTaskInput = z.infer<typeof createTaskInputSchema>;
 
@@ -27,6 +32,9 @@ export const taskEventPayloadSchema = z
     from_status: taskStatusSchema.optional(),
     to_status: taskStatusSchema.optional(),
     tool_name: z.string().max(100).optional(),
+    assignee_id: z.string().uuid().optional(),
+    reason: z.string().max(500).optional(),
+    summary: z.string().max(1000).optional(),
   })
   .strict();
 export type TaskEventPayload = z.infer<typeof taskEventPayloadSchema>;

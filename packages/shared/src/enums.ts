@@ -4,7 +4,7 @@
 export const EVENT_SOURCES = ["user", "agent_declared", "agent_hook", "local_git", "github", "tests"] as const;
 export type EventSource = (typeof EVENT_SOURCES)[number];
 
-export const TASK_STATUSES = ["backlog", "in_progress", "in_review", "done"] as const;
+export const TASK_STATUSES = ["awaiting_acceptance", "backlog", "in_progress", "in_review", "done", "declined"] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
 export const AGENT_KINDS = ["claude_code", "codex", "other"] as const;
@@ -26,11 +26,16 @@ export const SOURCE_LABELS: Record<EventSource, string> = {
 };
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  awaiting_acceptance: "Aguardando aceite",
   backlog: "Backlog",
   in_progress: "Em andamento",
   in_review: "Em revisão",
   done: "Concluído",
+  declined: "Recusada",
 };
+
+/** Status que uma pessoa escolhe livremente depois de aceitar (aceite e recusa têm botões próprios). */
+export const WORK_STATUSES = ["backlog", "in_progress", "in_review", "done"] as const satisfies readonly TaskStatus[];
 
 export const AGENT_LABELS: Record<AgentKind, string> = {
   claude_code: "Claude Code",

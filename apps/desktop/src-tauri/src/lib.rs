@@ -1,4 +1,5 @@
 mod agent_config;
+mod project_instructions;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -44,7 +45,11 @@ pub fn run() {
                 })
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![agent_config::connect_agent])
+        .invoke_handler(tauri::generate_handler![
+            agent_config::connect_agent,
+            project_instructions::preview_agent_instructions,
+            project_instructions::write_agent_instructions
+        ])
         .setup(move |app| {
             // Atalho ocupado (outro app, ou outra cópia do Cooper) não pode impedir o app de abrir.
             if let Err(e) = app.global_shortcut().register(toggle) {

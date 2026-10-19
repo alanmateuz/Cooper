@@ -90,10 +90,15 @@ const taskRows = [
   { title: "Notificações por e-mail de entrega", status: "backlog" },
   { title: "Ajustar layout da landing", status: "in_review", assignee_id: ids.BIA },
   { title: "Login com link mágico", status: "done", assignee_id: ids.ALAN },
+  // convite de tarefa: Alan envia para a Bia, com prompt (nasce aguardando aceite)
+  { title: "Header da página do evento", assignee_id: ids.BIA, created_by: ids.ALAN,
+    prompt: "Crie o header da página do evento: logo à esquerda, menu (Programação, Times, Entregas) à direita, responsivo." },
 ];
 const tasks = [];
 for (const t of taskRows) {
-  tasks.push(await must(admin.from("tasks").insert({ ...t, workspace_id: ws.id, created_by: ids.ALAN }).select().single()));
+  // cada um cria as próprias tarefas (já aceitas); só a do convite tem created_by explícito
+  const created_by = t.created_by ?? t.assignee_id ?? ids.ALAN;
+  tasks.push(await must(admin.from("tasks").insert({ ...t, workspace_id: ws.id, created_by }).select().single()));
 }
 const [qr, times] = tasks;
 

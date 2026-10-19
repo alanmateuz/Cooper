@@ -31,8 +31,13 @@ export interface Task {
   title: string;
   description: string | null;
   acceptance_criteria: string | null;
+  /** O que a IA de quem receber deve executar. Descrição da tarefa, não instrução de sistema. */
+  prompt: string | null;
   status: TaskStatus;
   assignee_id: string | null;
+  accepted_at: string | null;
+  declined_at: string | null;
+  decline_reason: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;

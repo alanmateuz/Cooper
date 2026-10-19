@@ -117,16 +117,19 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("MCP de ponta a ponta: dois
     await Promise.all([codexAlan?.close(), claudeBia?.close()]);
   });
 
-  it("expõe as seis ferramentas do MVP", async () => {
+  it("expõe as ferramentas do MCP", async () => {
     const { tools } = await codexAlan.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ["get_my_tasks", "get_task_context", "get_team_status", "get_workspace_context", "report_progress", "start_task"].sort(),
+      [
+        "get_my_tasks", "get_task_context", "get_team_status", "get_workspace_context", "report_progress", "start_task",
+        "create_task", "accept_task", "decline_task", "complete_task",
+      ].sort(),
     );
   });
 
   it("critério 3: um cliente consulta suas tarefas", async () => {
-    const tasks = await call(codexAlan, "get_my_tasks");
-    expect(tasks.some((t: { number: number }) => t.number === 1)).toBe(true);
+    const mine = await call(codexAlan, "get_my_tasks");
+    expect(mine.tasks.some((t: { number: number }) => t.number === 1)).toBe(true);
     const ctx = await call(codexAlan, "get_task_context", { task_number: 1 });
     expect(ctx.acceptance_criteria).toMatch(/QR/);
   });
@@ -171,7 +174,7 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("MCP de ponta a ponta: dois
 
   it("ferramenta com tarefa inexistente retorna erro legível, sem derrubar o servidor", async () => {
     await expect(call(claudeBia, "get_task_context", { task_number: 9999 })).rejects.toThrow(/não existe/);
-    const tasks = await call(claudeBia, "get_my_tasks");
-    expect(Array.isArray(tasks)).toBe(true);
+    const mine = await call(claudeBia, "get_my_tasks");
+    expect(Array.isArray(mine.awaiting_acceptance) && Array.isArray(mine.tasks)).toBe(true);
   });
 });
