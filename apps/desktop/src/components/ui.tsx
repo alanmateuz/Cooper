@@ -5,7 +5,8 @@ import { initials } from "../lib/format";
 const DOT: Record<PresenceStatus, string> = {
   running: "bg-run shadow-[0_0_0_3px_color-mix(in_srgb,var(--run)_25%,transparent)]",
   online: "bg-online",
-  idle: "bg-idle/60",
+  // sólido: translúcido, sobre o anel escuro do tema escuro, parecia uma mancha preta
+  idle: "bg-idle",
   unknown: "border border-dashed border-idle bg-transparent",
 };
 
@@ -23,7 +24,7 @@ export function StatusDot({ status, size = 8 }: { status: PresenceStatus; size?:
 /**
  * Avatar com selo de presença. "Desconhecido" (nenhuma chamada ao Cooper) não ganha selo:
  * um círculo vazio não informa nada e parecia uma mancha no avatar.
- * O anel do selo usa a cor do fundo (--panel) para separar o ponto da foto.
+ * Sem anel em volta do selo: o anel na cor do fundo "mordia" a borda do avatar.
  */
 export function Avatar({ name, color, status, size = 24 }: { name: string; color: string; status?: PresenceStatus; size?: number }) {
   const dot = Math.max(7, Math.round(size * 0.28));
@@ -37,7 +38,7 @@ export function Avatar({ name, color, status, size = 24 }: { name: string; color
       </span>
       {status && status !== "unknown" && (
         <span
-          className="absolute -right-px -bottom-px rounded-full ring-2 ring-[var(--panel)]"
+          className="absolute -right-px -bottom-px rounded-full"
           title={PRESENCE_LABELS[status]}
           style={{ width: dot, height: dot }}
         >
