@@ -2,12 +2,15 @@ import { localDay, viewsFromReport, viewsFromRows } from "@cooper/shared";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useMemo, useState } from "react";
 import { pref, setPref } from "../lib/format";
+import { buildNotifications, useNotificationState } from "../lib/notifications";
 import { buildPeople } from "../lib/people";
+import { playChime } from "../lib/sound";
 import { claudeAutoRefreshPref, CLAUDE_AUTO_REFRESH_PREF, refreshClaudeLimits, useClaudeAutoRefresh, useLocalUsage, useShareUsage } from "../lib/usage";
 import { useWorkspace } from "../lib/useWorkspace";
 import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, type WidgetMode } from "../lib/window";
 import { ContextTab } from "./ContextTab";
-import { ActivityTab, Empty, PrivacySection, SettingsTab } from "./OtherTabs";
+import { BellButton, NotificationsPanel } from "./Notifications";
+import { ActivityTab, Empty, NotificationSettings, PrivacySection, SettingsSection, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
 import { ClaudeStatusLine } from "./ClaudeStatusLine";
 import { CreateWorkspace, MembersSection, Onboarding, PendingInvites } from "./Team";
@@ -84,6 +87,27 @@ export function Widget({
     userId === me ? viewsFromReport(localUsage) : viewsFromRows(data.usage.filter((u) => u.user_id === userId), today, now);
   const awaiting = useMemo(() => awaitingForMe(data, session.user.id), [data, session.user.id]);
 
+  // Notificações: sino no cabeçalho, som ao chegar algo novo e aviso de uso crítico do time.
+  const [soundOn, setSoundOnState] = useState(() => pref("notifSound", true));
+  const [usageAlerts, setUsageAlertsState] = useState(() => pref("notifUsage", true));
+  const setSoundOn = (v: boolean) => {
+    setSoundOnState(v);
+    setPref("notifSound", v);
+  };
+  const setUsageAlerts = (v: boolean) => {
+    setUsageAlertsState(v);
+    setPref("notifUsage", v);
+  };
+  const notifications = useMemo(() => buildNotifications(data, me, today, now, usageAlerts), [data, me, today, now, usageAlerts]);
+  const notif = useNotificationState(notifications, status === "ready", soundOn);
+  const [notifOpen, setNotifOpen] = useState<Set<string> | null>(null);
+  const toggleNotifications = () => {
+    if (notifOpen) return setNotifOpen(null);
+    setNotifOpen(new Set(notifications.filter(notif.isUnread).map((n) => n.id)));
+    notif.markSeen();
+  };
+  const [focusTask, setFocusTask] = useState<{ id: string; nonce: number } | null>(null);
+
   if (mode === "pill")
     return <Pill people={people} me={me} usageOf={usageOf} alerts={alerts} awaiting={awaiting.length} onExpand={() => setMode("compact")} />;
 
@@ -95,13 +119,14 @@ export function Widget({
         <span className="text-[10px] font-bold tracking-wider text-accent">
           CO
         </span>
-        <span className="min-w-0 flex-1 truncate font-semibold">
-          {data.workspace?.name ?? "Cooper"}
+        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="truncate font-semibold">{data.workspace?.name ?? "Cooper"}</span>
+          <span
+            className={`h-1.5 w-1.5 shrink-0 rounded-full ${realtime === "live" ? "bg-run" : realtime === "off" ? "bg-warn" : "bg-idle"}`}
+            title={realtime === "live" ? "Tempo real conectado" : paused ? "Sincronização pausada" : "Conectando…"}
+          />
         </span>
-        <span
-          className={`h-1.5 w-1.5 rounded-full ${realtime === "live" ? "bg-run" : realtime === "off" ? "bg-warn" : "bg-idle"}`}
-          title={realtime === "live" ? "Tempo real conectado" : paused ? "Sincronização pausada" : "Conectando…"}
-        />
+        <BellButton unread={notif.unread} open={!!notifOpen} onClick={toggleNotifications} />
         <IconButton label="Recolher em pílula" onClick={() => setMode("pill")}>
           <Icon name="minimize" />
         </IconButton>
@@ -115,7 +140,7 @@ export function Widget({
         )}
       </header>
 
-      <main className="min-h-0 flex-1 overflow-hidden">
+      <main className="relative min-h-0 flex-1 overflow-hidden">
         {status === "loading" && <Empty>Carregando…</Empty>}
         {status === "error" && <Empty>Erro ao carregar: {error}</Empty>}
         {status === "empty" && <Onboarding me={session.user.id} onReady={(id) => void loadWorkspaces(id)} />}
@@ -123,29 +148,15 @@ export function Widget({
           <>
             {showTab === "now" && (
               <div className="h-full space-y-2 overflow-y-auto p-2.5">
-                {/* alertas de conflito entram aqui (Fase 4) */}
-                {awaiting.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTab("tasks");
-                      setMode("expanded");
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-left hover:bg-accent/15"
-                  >
-                    <Icon name="list" size={12} />
-                    <span className="min-w-0 flex-1 truncate">
-                      {awaiting.length === 1 ? `Tarefa nova: #${awaiting[0]!.number} ${awaiting[0]!.title}` : `${awaiting.length} tarefas aguardando seu aceite`}
-                    </span>
-                    <span className="shrink-0 text-[10.5px] text-accent">ver</span>
-                  </button>
-                )}
+                {/* alertas de conflito entram aqui (Fase 4); tarefas novas e avisos ficam no sino */}
                 {people.map((p) => (
                   <TeamCard key={p.userId} p={p} now={now} isMe={p.userId === me} usage={usageOf(p.userId)} onRefreshClaude={p.userId === me ? refreshClaude : undefined} />
                 ))}
               </div>
             )}
-            {showTab === "tasks" && <TasksTab data={data} me={session.user.id} now={now} />}
+            {showTab === "tasks" && (
+              <TasksTab key={focusTask?.nonce ?? 0} data={data} me={session.user.id} now={now} initialOpenId={focusTask?.id ?? null} />
+            )}
             {showTab === "context" && <ContextTab data={data} me={me} now={now} />}
             {showTab === "activity" && <ActivityTab data={data} now={now} />}
             {showTab === "settings" && (
@@ -160,20 +171,47 @@ export function Widget({
                 setDim={setDim}
                 paused={paused}
                 now={now}
-              >
-                <MembersSection data={data} me={session.user.id} now={now} />
-                <PrivacySection workspaceId={data.workspace.id} sharing={sharing} status={shareStatus} />
-                <ClaudeStatusLine autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh} />
-                <PendingInvites onAccepted={(id) => void loadWorkspaces(id)} />
-                <details>
-                  <summary className="cursor-pointer text-muted hover:text-text">Novo projeto</summary>
-                  <div className="pt-1.5">
+                projects={
+                  <SettingsSection title="Novo projeto">
                     <CreateWorkspace me={session.user.id} onCreated={(id) => void loadWorkspaces(id)} />
-                  </div>
-                </details>
+                  </SettingsSection>
+                }
+              >
+                <SettingsSection title="Notificações">
+                  <NotificationSettings
+                    sound={soundOn}
+                    setSound={setSoundOn}
+                    usageAlerts={usageAlerts}
+                    setUsageAlerts={setUsageAlerts}
+                    onTest={() => playChime("normal")}
+                    onTestCritical={() => playChime("critical")}
+                  />
+                </SettingsSection>
+                <SettingsSection title="Equipe">
+                  <MembersSection data={data} me={session.user.id} now={now} />
+                  <PendingInvites onAccepted={(id) => void loadWorkspaces(id)} />
+                </SettingsSection>
+                <SettingsSection title="Uso de IA">
+                  <PrivacySection workspaceId={data.workspace.id} sharing={sharing} status={shareStatus} />
+                  <ClaudeStatusLine autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh} />
+                </SettingsSection>
               </SettingsTab>
             )}
           </>
+        )}
+        {notifOpen && status === "ready" && (
+          <NotificationsPanel
+            items={notifications}
+            fresh={notifOpen}
+            now={now}
+            onClose={() => setNotifOpen(null)}
+            onOpenTask={(id) => {
+              setNotifOpen(null);
+              setFocusTask({ id, nonce: Date.now() });
+              setTab("tasks");
+              setMode("expanded");
+            }}
+          />
         )}
       </main>
 
@@ -186,7 +224,10 @@ export function Widget({
               title={t.label}
               aria-label={t.label}
               aria-current={tab === t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => {
+                setTab(t.id);
+                setFocusTask(null);
+              }}
               className={`relative my-1 flex flex-1 flex-col items-center justify-center gap-0.5 rounded-md ${tab === t.id ? "bg-raised text-accent" : "text-muted hover:text-text"}`}
             >
               <Icon name={t.icon} size={14} />

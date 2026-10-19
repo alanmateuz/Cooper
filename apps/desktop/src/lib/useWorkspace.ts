@@ -84,7 +84,7 @@ export function useWorkspace(paused: boolean) {
         .select("*")
         .eq("workspace_id", id)
         .order("occurred_at", { ascending: false })
-        .limit(40)).data ?? []) as TaskEvent[],
+        .limit(80)).data ?? []) as TaskEvent[],
     }),
     context_blocks: async (id) => ({
       context: ((await supabase.from("context_blocks").select("*").eq("workspace_id", id).order("position")).data ??

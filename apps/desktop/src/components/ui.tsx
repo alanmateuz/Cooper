@@ -85,6 +85,10 @@ const PATHS = {
   branch: "M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm12-12a9 9 0 0 1-9 9",
   chevron: "m9 18 6-6-6-6",
   plus: "M12 5v14M5 12h14",
+  bell: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0",
+  trash: "M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m5 5v6m4-6v6",
+  check: "M20 6 9 17l-5-5",
+  gauge: "M12 14l3.5-3.5M3.3 17a9 9 0 1 1 17.4 0",
 } as const;
 
 export function Icon({ name, size = 14 }: { name: keyof typeof PATHS; size?: number }) {

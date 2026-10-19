@@ -118,9 +118,9 @@ export function AgentsSection({ workspaceId, now }: { workspaceId: string; now: 
 
   return (
     <section className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <span className="font-medium">Agentes</span>
-        <div className="flex gap-1">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10.5px] leading-snug text-muted">Conecte o Claude Code ou o Codex ao Cooper.</span>
+        <div className="flex shrink-0 gap-1">
           <select value={kind} onChange={(e) => setKind(e.target.value as AgentKind)} className="rounded border border-line bg-raised px-1 py-0.5">
             {AGENT_KINDS.map((k) => (
               <option key={k} value={k}>{AGENT_LABELS[k]}</option>

@@ -25,9 +25,12 @@ export const awaitingForMe = (d: Data, me: string) => d.tasks.filter((t) => t.as
 
 type View = "mine" | "theirs" | "nobody";
 
-export function TasksTab({ data, me, now }: { data: Data; me: string; now: Date }) {
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [view, setView] = useState<View>("mine");
+export function TasksTab({ data, me, now, initialOpenId = null }: { data: Data; me: string; now: Date; initialOpenId?: string | null }) {
+  const [openId, setOpenId] = useState<string | null>(initialOpenId);
+  const [view, setView] = useState<View>(() => {
+    const t = data.tasks.find((x) => x.id === initialOpenId);
+    return !t || t.assignee_id === me ? "mine" : t.assignee_id ? "theirs" : "nobody";
+  });
   const open = data.tasks.find((t) => t.id === openId) ?? null;
   const others = data.members.filter((m) => m.user_id !== me);
   const otherLabel = others.length === 1 ? `Para ${shortName(data, others[0]!.user_id)}` : "Para o outro";
@@ -346,15 +349,52 @@ function TaskPanel({ task, data, me, now, onClose }: { task: Task; data: Data; m
     if (error) setErr(error.message);
   }
 
+  // Apaga quem é dono do workspace, quem criou ou quem é o responsável (regra no banco).
+  const isOwner = data.members.some((m) => m.user_id === me && m.role === "owner");
+  const canDelete = isOwner || task.created_by === me || task.assignee_id === me;
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  async function remove() {
+    setErr(null);
+    setDeleting(true);
+    const { data: gone, error } = await supabase.from("tasks").delete().eq("id", task.id).select("id");
+    setDeleting(false);
+    if (error) return setErr(error.message);
+    if (!gone?.length) return setErr("Você não pode excluir esta tarefa.");
+    onClose();
+  }
+
   return (
     <aside className="absolute inset-0 z-10 flex flex-col bg-panel" role="dialog" aria-label={`Tarefa #${task.number}`}>
       <header className="flex items-center gap-2 border-b border-line px-2 py-1.5">
         <span className="text-muted">#{task.number}</span>
         <span className="min-w-0 flex-1 truncate font-semibold">{task.title}</span>
-        <button type="button" onClick={onClose} aria-label="Fechar" className="text-muted hover:text-text">
+        {canDelete && (
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            title="Excluir tarefa"
+            aria-label="Excluir tarefa"
+            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted hover:bg-danger/10 hover:text-danger"
+          >
+            <Icon name="trash" size={13} />
+          </button>
+        )}
+        <button type="button" onClick={onClose} aria-label="Fechar" className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted hover:bg-raised hover:text-text">
           <Icon name="close" size={13} />
         </button>
       </header>
+      {confirmDelete && (
+        <div className="flex items-center gap-2 border-b border-danger/30 bg-danger/10 px-2.5 py-2" role="alert">
+          <span className="min-w-0 flex-1 leading-snug">Excluir a tarefa #{task.number}? Isso não pode ser desfeito.</span>
+          <button type="button" onClick={() => setConfirmDelete(false)} className="rounded-md px-2 py-0.5 text-muted hover:text-text">
+            Cancelar
+          </button>
+          <button type="button" disabled={deleting} onClick={() => void remove()} className="rounded-md bg-danger px-2 py-0.5 font-medium text-white disabled:opacity-40">
+            Excluir
+          </button>
+        </div>
+      )}
       <div className="flex-1 space-y-2.5 overflow-y-auto p-2.5">
         <div className="grid grid-cols-[70px_1fr] items-center gap-y-1.5">
           <span className="text-muted">Enviada por</span>
@@ -438,6 +478,8 @@ export function describeEvent(type: string, p: Record<string, unknown>, name: (i
       return String(p.text ?? "progresso");
     case "context_updated":
       return `${{ create: "criou", update: "atualizou", restore: "restaurou", delete: "apagou" }[String(p.action)] ?? "mudou"} o bloco ${String(p.block_title ?? "")}`;
+    case "task_deleted":
+      return `apagou a tarefa #${String(p.number ?? "?")} ${String(p.title ?? "")}`;
     case "complete_task":
       return `concluiu: ${String(p.summary ?? "")}`;
     case "status_changed":

@@ -24,7 +24,7 @@ export function PendingInvites({ onAccepted }: { onAccepted: (workspaceId: strin
   if (list.length === 0) return null;
   return (
     <section className="space-y-1.5">
-      <h3 className="text-[10.5px] font-semibold tracking-wide text-muted uppercase">Convites para você</h3>
+      <h3 className="font-medium">Convites para você</h3>
       {list.map((i) => (
         <div key={i.id} className="flex items-center gap-2 rounded-md border border-accent/50 bg-raised px-2 py-1.5">
           <div className="min-w-0 flex-1">
@@ -124,7 +124,6 @@ export function MembersSection({ data, me, now }: { data: WorkspaceData; me: str
 
   return (
     <section className="space-y-1.5">
-      <span className="font-medium">Membros</span>
       {data.members.map((m) => (
         <div key={m.user_id} className="flex items-center gap-1.5 text-[10.5px]">
           <span className="h-2 w-2 rounded-full" style={{ background: m.profile?.avatar_color ?? "#64748b" }} />
