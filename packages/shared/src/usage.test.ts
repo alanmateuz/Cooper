@@ -6,13 +6,14 @@ const ME = "00000000-0000-4000-8000-000000000002";
 
 const report = (extra: Record<string, unknown> = {}): UsageReport =>
   ({
-    claude_code: { tokens: { input: 2, output: 30, cache_read: 100, cache_write: 50 }, models: ["claude-opus-5-5"], primary: null, secondary: null, last_event_at: 1 },
+    claude_code: { tokens: { input: 2, output: 30, cache_read: 100, cache_write: 50 }, models: ["claude-opus-5-5"], primary: null, secondary: null, last_event_at: 1, limits_observed_at: null },
     codex: {
       tokens: { input: 300, output: 20, cache_read: 200, cache_write: 0 },
       models: ["gpt-5.5-codex"],
       primary: { used_pct: 13, window_minutes: 300, resets_at: 4102444800 },
       secondary: null,
       last_event_at: 1,
+      limits_observed_at: 1792378866496,
       ...extra,
     },
   }) as UsageReport;

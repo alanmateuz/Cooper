@@ -22,6 +22,8 @@ export interface AgentUsageReport {
   primary: UsageLimit | null;
   secondary: UsageLimit | null;
   last_event_at: number | null;
+  /** epoch em ms de quando os limites foram lidos */
+  limits_observed_at: number | null;
 }
 /** Resposta do comando `read_ai_usage`. */
 export interface UsageReport {
@@ -52,6 +54,7 @@ export const aiUsageRowSchema = z
     secondary_used_pct: pct,
     secondary_window_minutes: z.number().int().positive().nullable(),
     secondary_resets_at: iso,
+    limits_observed_at: iso,
     observed_at: z.string().datetime({ offset: true }),
   })
   .strict();
@@ -82,6 +85,7 @@ export function usageRows(report: UsageReport, workspaceId: string, userId: stri
         secondary_used_pct: u.secondary?.used_pct ?? null,
         secondary_window_minutes: u.secondary?.window_minutes ?? null,
         secondary_resets_at: toIso(u.secondary?.resets_at),
+        limits_observed_at: u.limits_observed_at ? new Date(u.limits_observed_at).toISOString() : null,
         observed_at: now.toISOString(),
       }),
     );
@@ -97,6 +101,8 @@ export interface UsageView {
   models: string[];
   primary: { pct: number; resetsAt: Date; windowMinutes: number | null } | null;
   secondary: { pct: number; resetsAt: Date; windowMinutes: number | null } | null;
+  /** quando os limites foram lidos; null se não houver limite */
+  limitsObservedAt: Date | null;
 }
 
 const total = (t: UsageTokens) => t.input + t.output + t.cache_read + t.cache_write;
@@ -107,7 +113,17 @@ export function viewsFromReport(r: UsageReport | null): UsageView[] {
     const u = r[agent];
     if (!u) return [];
     const lim = (l: UsageLimit | null) => (l ? { pct: l.used_pct, resetsAt: new Date(l.resets_at * 1000), windowMinutes: l.window_minutes } : null);
-    return [{ agent, totalTokens: total(u.tokens), tokens: u.tokens, models: u.models, primary: lim(u.primary), secondary: lim(u.secondary) }];
+    return [
+      {
+        agent,
+        totalTokens: total(u.tokens),
+        tokens: u.tokens,
+        models: u.models,
+        primary: lim(u.primary),
+        secondary: lim(u.secondary),
+        limitsObservedAt: u.limits_observed_at ? new Date(u.limits_observed_at) : null,
+      },
+    ];
   });
 }
 
@@ -126,9 +142,13 @@ export function viewsFromRows(rows: AiUsageRow[], today: string, now: Date): Usa
         models: r.models,
         primary: lim(r.primary_used_pct, r.primary_resets_at, r.primary_window_minutes),
         secondary: lim(r.secondary_used_pct, r.secondary_resets_at, r.secondary_window_minutes),
+        limitsObservedAt: r.limits_observed_at ? new Date(r.limits_observed_at) : null,
       };
     });
 }
+
+/** Leitura de limite com mais de 30 min: o cartão esmaece a barra. */
+export const LIMIT_STALE_MS = 30 * 60_000;
 
 /** Data local AAAA-MM-DD e o início do dia (ms), usados para "uso do dia". */
 export function localDay(now = new Date()): { day: string; startMs: number } {

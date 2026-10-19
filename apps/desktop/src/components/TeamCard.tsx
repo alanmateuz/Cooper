@@ -1,9 +1,23 @@
-import { AGENT_LABELS, PRESENCE_LABELS, type UsageView } from "@cooper/shared";
+import { AGENT_LABELS, LIMIT_STALE_MS, PRESENCE_LABELS, type UsageView } from "@cooper/shared";
+import { useState } from "react";
 import { shortSha, timeAgo } from "../lib/format";
 import type { PersonView } from "../lib/people";
 import { Avatar, Icon, SourceBadge, StatusDot } from "./ui";
 
-export function TeamCard({ p, now, isMe, usage }: { p: PersonView; now: Date; isMe: boolean; usage: UsageView[] }) {
+export function TeamCard({
+  p,
+  now,
+  isMe,
+  usage,
+  onRefreshClaude,
+}: {
+  p: PersonView;
+  now: Date;
+  isMe: boolean;
+  usage: UsageView[];
+  /** só no meu cartão, no app desktop: lê os limites do Claude Code em segundo plano */
+  onRefreshClaude?: () => Promise<void>;
+}) {
   const s = p.session;
   const snap = p.snapshot;
   return (
@@ -62,7 +76,7 @@ export function TeamCard({ p, now, isMe, usage }: { p: PersonView; now: Date; is
           <div className="text-[10.5px] text-muted">sem dados de git local</div>
         )}
 
-        <UsageLines usage={usage} now={now} isMe={isMe} />
+        <UsageLines usage={usage} now={now} isMe={isMe} onRefreshClaude={onRefreshClaude} />
 
         {p.otherSessions.map(({ session, presence }) => (
           <div key={session.id} className="flex items-center gap-1.5 text-[10.5px] text-muted">
@@ -86,10 +100,12 @@ function resetLabel(at: Date, now: Date): string {
 }
 
 /** Uso de IA do dia: tokens e, quando o agente informa (hoje só o Codex), os limites. Sem dado, diz isso. */
-function UsageLines({ usage, now, isMe }: { usage: UsageView[]; now: Date; isMe: boolean }) {
-  if (usage.length === 0) return <div className="text-[10.5px] text-muted">sem dados de uso</div>;
+function UsageLines({ usage, now, isMe, onRefreshClaude }: { usage: UsageView[]; now: Date; isMe: boolean; onRefreshClaude?: () => Promise<void> }) {
+  const hasClaude = usage.some((u) => u.agent === "claude_code");
+  if (usage.length === 0 && !onRefreshClaude) return <div className="text-[10.5px] text-muted">sem dados de uso</div>;
   return (
     <>
+      {usage.length === 0 && <div className="text-[10.5px] text-muted">sem dados de uso</div>}
       {usage.map((u) => (
         <div key={u.agent} className="space-y-0.5 text-[10.5px] text-muted">
           <div
@@ -100,16 +116,58 @@ ${u.models.join(", ")}` : ""}`}
             {AGENT_LABELS[u.agent]} · {compact.format(u.totalTokens)} tokens hoje
             {!isMe && <span> · compartilhado</span>}
           </div>
-          {u.primary && <LimitBar label="5 h" pct={u.primary.pct} reset={resetLabel(u.primary.resetsAt, now)} />}
-          {u.secondary && <LimitBar label="semana" pct={u.secondary.pct} reset={resetLabel(u.secondary.resetsAt, now)} />}
+          {u.primary && <LimitBar label="5 h" pct={u.primary.pct} reset={resetLabel(u.primary.resetsAt, now)} stale={isStale(u, now)} />}
+          {u.secondary && <LimitBar label="semana" pct={u.secondary.pct} reset={resetLabel(u.secondary.resetsAt, now)} stale={isStale(u, now)} />}
+          <ReadAt u={u} now={now} onRefresh={u.agent === "claude_code" ? onRefreshClaude : undefined} />
         </div>
       ))}
+      {!hasClaude && onRefreshClaude && <ReadAt u={null} now={now} onRefresh={onRefreshClaude} />}
     </>
   );
 }
 
-function LimitBar({ label, pct, reset }: { label: string; pct: number; reset: string }) {
-  const color = pct >= 90 ? "bg-red-400" : pct >= 70 ? "bg-warn" : "bg-accent";
+const isStale = (u: UsageView, now: Date) => !!u.limitsObservedAt && now.getTime() - u.limitsObservedAt.getTime() > LIMIT_STALE_MS;
+const hhmm = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+/** "limite lido 23:51" e, no meu cartão do Claude Code, o botão para ler de novo. */
+function ReadAt({ u, now, onRefresh }: { u: UsageView | null; now: Date; onRefresh?: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const at = u?.limitsObservedAt ?? null;
+  if (!at && !onRefresh) return null;
+  return (
+    <div className="flex items-center gap-1.5 text-[10px] text-muted">
+      {at ? (
+        <span className={isStale(u!, now) ? "text-warn" : ""} title={at.toLocaleString("pt-BR")}>
+          limite lido {hhmm(at)}
+        </span>
+      ) : (
+        <span>Claude Code: limite não lido</span>
+      )}
+      {onRefresh && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            setErr(null);
+            onRefresh()
+              .catch((e) => setErr(String(e)))
+              .finally(() => setBusy(false));
+          }}
+          className="text-accent hover:underline disabled:opacity-50"
+          title="Roda o Claude Code em segundo plano (uma mensagem curta no Haiku) para ler os limites"
+        >
+          {busy ? "lendo…" : "atualizar limite"}
+        </button>
+      )}
+      {err && <span className="truncate text-red-400" title={err}>{err}</span>}
+    </div>
+  );
+}
+
+function LimitBar({ label, pct, reset, stale }: { label: string; pct: number; reset: string; stale?: boolean }) {
+  const color = stale ? "bg-idle" : pct >= 90 ? "bg-red-400" : pct >= 70 ? "bg-warn" : "bg-accent";
   return (
     <div className="flex items-center gap-1.5" title={`${label}: ${pct}% do limite usado; reinicia ${reset}`}>
       <span className="w-10 shrink-0">{label}</span>

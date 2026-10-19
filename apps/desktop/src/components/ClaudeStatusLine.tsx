@@ -10,10 +10,10 @@ interface Plan {
 }
 
 /**
- * ⚙ → Limites do Claude Code. Os JSONL do Claude Code não trazem limites; a status line traz.
- * Instala a status line do Cooper no settings.json do Claude Code, só depois de mostrar o que muda.
+ * ⚙ → Limites do Claude Code. Os JSONL do Claude Code não trazem limites. Duas fontes: atualização em segundo plano
+ * (claude_limits.rs, opcional) e a status line, instalada no settings.json só depois de mostrar o que muda.
  */
-export function ClaudeStatusLine() {
+export function ClaudeStatusLine({ autoRefresh, setAutoRefresh }: { autoRefresh: boolean; setAutoRefresh: (v: boolean) => void }) {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -49,13 +49,23 @@ export function ClaudeStatusLine() {
     <details className="space-y-1.5">
       <summary className="cursor-pointer font-medium">Limites do Claude Code</summary>
       <p className="pt-1 text-[10.5px] leading-snug text-muted">
-        O Claude Code só informa os limites de 5 h e da semana para a status line (planos Pro e Max). O Cooper instala uma status line que guarda
-        apenas esses números nesta máquina. Funciona no Claude Code do terminal; o app desktop do Claude não roda status line, então lá só os
-        tokens do dia aparecem.
+        Os arquivos do Claude Code não trazem os limites de 5 h e da semana (planos Pro e Max). O Cooper os lê de duas formas, guardando só os
+        números nesta máquina:
+      </p>
+      <label className="flex items-start gap-1.5 text-[10.5px] leading-snug">
+        <input type="checkbox" className="mt-0.5" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+        <span>
+          <b>Atualizar a cada 1 h</b> (ou pelo botão no seu cartão). Roda o Claude Code em segundo plano com uma mensagem curta no Haiku; isso
+          gasta um pouco do seu limite.
+        </span>
+      </label>
+      <p className="text-[10.5px] leading-snug text-muted">
+        <b>Status line:</b> atualiza a cada resposta, sem gasto extra, mas só no Claude Code do terminal (o app desktop do Claude não roda status
+        line).
       </p>
       {!plan && (
         <button type="button" disabled={busy} onClick={() => void call("preview_claude_statusline").then((p) => p && (setPlan(p), setDone(null)))} className="rounded border border-line px-2 py-0.5 hover:bg-raised disabled:opacity-40">
-          Ver o que muda
+          Status line: ver o que muda
         </button>
       )}
       {plan && (

@@ -58,6 +58,8 @@ pub struct AgentUsage {
     pub secondary: Option<Limit>,
     /// epoch em ms do último registro de hoje
     pub last_event_at: Option<i64>,
+    /// epoch em ms de quando os limites foram lidos (para mostrar "lido HH:MM")
+    pub limits_observed_at: Option<i64>,
 }
 
 #[derive(Serialize, Default, Debug)]
@@ -349,11 +351,19 @@ fn scan_codex_file(acc: &mut CodexAcc, src: impl Iterator<Item = String>, since_
 fn finish_codex(acc: CodexAcc, now_s: i64) -> Option<AgentUsage> {
     // limite cujo reinício já passou não vale mais: fica desconhecido
     let fresh = |l: Option<Limit>| l.filter(|l| l.resets_at > now_s);
-    let (primary, secondary) = acc.limits.map(|(_, p, s)| (fresh(p), fresh(s))).unwrap_or((None, None));
+    let (primary, secondary, at) = acc.limits.map(|(t, p, s)| (fresh(p), fresh(s), Some(t))).unwrap_or((None, None, None));
     if acc.tokens.total() == 0 && primary.is_none() && secondary.is_none() {
         return None;
     }
-    Some(AgentUsage { tokens: acc.tokens, models: acc.models.into_iter().collect(), primary, secondary, last_event_at: acc.last_event_at })
+    let limits_observed_at = if primary.is_some() || secondary.is_some() { at } else { None };
+    Some(AgentUsage {
+        tokens: acc.tokens,
+        models: acc.models.into_iter().collect(),
+        primary,
+        secondary,
+        last_event_at: acc.last_event_at,
+        limits_observed_at,
+    })
 }
 
 // ───────────── limites do Claude Code (status line) ─────────────
@@ -368,6 +378,7 @@ struct StatusWindow {
 struct StatusLimits {
     five_hour: Option<StatusWindow>,
     seven_day: Option<StatusWindow>,
+    observed_at: Option<i64>,
 }
 
 fn cooper_dir() -> Option<PathBuf> {
@@ -381,11 +392,13 @@ fn with_claude_limits(usage: Option<AgentUsage>, raw: Option<&str>, now_s: i64) 
         w.filter(|w| w.resets_at > now_s && w.used_percentage.is_finite())
             .map(|w| Limit { used_pct: w.used_percentage.clamp(0.0, 100.0), window_minutes: Some(minutes), resets_at: w.resets_at })
     };
-    let (primary, secondary) = parsed.map(|p| (lim(p.five_hour, 300), lim(p.seven_day, 10_080))).unwrap_or((None, None));
+    let (primary, secondary, at) =
+        parsed.map(|p| (lim(p.five_hour, 300), lim(p.seven_day, 10_080), p.observed_at)).unwrap_or((None, None, None));
     if usage.is_none() && primary.is_none() && secondary.is_none() {
         return None;
     }
     let mut u = usage.unwrap_or_default();
+    u.limits_observed_at = if primary.is_some() || secondary.is_some() { at } else { None };
     u.primary = primary;
     u.secondary = secondary;
     Some(u)
@@ -511,6 +524,7 @@ mod tests {
     fn limites_da_status_line() {
         let raw = r#"{"five_hour":{"used_percentage":23.5,"resets_at":2000},"seven_day":{"used_percentage":41.2,"resets_at":500},"observed_at":1}"#;
         let u = with_claude_limits(None, Some(raw), 1000).unwrap();
+        assert_eq!(u.limits_observed_at, Some(1));
         assert_eq!(u.primary, Some(Limit { used_pct: 23.5, window_minutes: Some(300), resets_at: 2000 }));
         assert!(u.secondary.is_none(), "reinício já passou");
         assert_eq!(u.tokens.total(), 0);

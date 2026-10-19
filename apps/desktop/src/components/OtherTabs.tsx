@@ -4,7 +4,6 @@ import { timeAgo } from "../lib/format";
 import { supabase } from "../lib/supabase";
 import type { WorkspaceData } from "../lib/useWorkspace";
 import { AgentsSection } from "./AgentsSection";
-import { ClaudeStatusLine } from "./ClaudeStatusLine";
 import { ProjectInstructions } from "./ProjectInstructions";
 import { describeEvent } from "./TasksTab";
 import { Icon, SourceBadge } from "./ui";
@@ -117,7 +116,6 @@ export function SettingsTab({
       {children}
       <AgentsSection workspaceId={workspace.id} now={now} />
       <ProjectInstructions />
-      <ClaudeStatusLine />
       <p className="text-[10.5px] leading-snug text-muted">Repositório e hooks entram nas etapas de git e hooks.</p>
       <button type="button" onClick={() => void supabase.auth.signOut()} className="rounded-md border border-line px-2 py-1 hover:bg-raised">
         Sair

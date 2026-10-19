@@ -27,6 +27,7 @@ const report: UsageReport = {
     primary: { used_pct: 13, window_minutes: 300, resets_at: 4102444800 },
     secondary: { used_pct: 18, window_minutes: 10080, resets_at: 4102444800 },
     last_event_at: null,
+    limits_observed_at: 1792378866496,
   },
 };
 
@@ -46,7 +47,8 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("uso de IA compartilhado", 
   });
 
   it("começa desligado", async () => {
-    const m = await alan.c.from("workspace_members").select("share_usage").eq("workspace_id", ws).eq("user_id", bia.id).single();
+    // conta que nem a tela nem os outros testes mexem: vale o padrão da coluna
+    const m = await intruso.c.from("workspace_members").select("share_usage").eq("user_id", intruso.id).single();
     expect(m.data!.share_usage).toBe(false);
   });
 

@@ -3,11 +3,12 @@ import type { Session } from "@supabase/supabase-js";
 import { useEffect, useMemo, useState } from "react";
 import { pref, setPref } from "../lib/format";
 import { buildPeople } from "../lib/people";
-import { useLocalUsage, useShareUsage } from "../lib/usage";
+import { claudeAutoRefreshPref, CLAUDE_AUTO_REFRESH_PREF, refreshClaudeLimits, useClaudeAutoRefresh, useLocalUsage, useShareUsage } from "../lib/usage";
 import { useWorkspace } from "../lib/useWorkspace";
 import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, type WidgetMode } from "../lib/window";
 import { ActivityTab, ContextTab, Empty, PrivacySection, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
+import { ClaudeStatusLine } from "./ClaudeStatusLine";
 import { CreateWorkspace, MembersSection, Onboarding, PendingInvites } from "./Team";
 import { awaitingForMe, TasksTab } from "./TasksTab";
 import { TeamCard } from "./TeamCard";
@@ -63,8 +64,20 @@ export function Widget({
   const alerts = 0; // regras de conflito: Fase 4
   const me = session.user.id;
   const sharing = data.members.find((m) => m.user_id === me)?.share_usage ?? false;
-  const localUsage = useLocalUsage();
+  const { report: localUsage, reload: reloadUsage } = useLocalUsage();
   useShareUsage(localUsage, data.workspace?.id ?? null, me, sharing);
+  const [autoRefresh, setAutoRefreshState] = useState(claudeAutoRefreshPref);
+  const setAutoRefresh = (v: boolean) => {
+    setAutoRefreshState(v);
+    setPref(CLAUDE_AUTO_REFRESH_PREF, v);
+  };
+  useClaudeAutoRefresh(autoRefresh, localUsage, reloadUsage);
+  const refreshClaude = inTauri
+    ? async () => {
+        await refreshClaudeLimits();
+        await reloadUsage();
+      }
+    : undefined;
   const today = localDay(now).day;
   const usageOf = (userId: string) =>
     userId === me ? viewsFromReport(localUsage) : viewsFromRows(data.usage.filter((u) => u.user_id === userId), today, now);
@@ -126,7 +139,7 @@ export function Widget({
                   </button>
                 )}
                 {people.map((p) => (
-                  <TeamCard key={p.userId} p={p} now={now} isMe={p.userId === me} usage={usageOf(p.userId)} />
+                  <TeamCard key={p.userId} p={p} now={now} isMe={p.userId === me} usage={usageOf(p.userId)} onRefreshClaude={p.userId === me ? refreshClaude : undefined} />
                 ))}
               </div>
             )}
@@ -148,6 +161,7 @@ export function Widget({
               >
                 <MembersSection data={data} me={session.user.id} now={now} />
                 <PrivacySection workspaceId={data.workspace.id} sharing={sharing} />
+                <ClaudeStatusLine autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh} />
                 <PendingInvites onAccepted={(id) => void loadWorkspaces(id)} />
                 <details>
                   <summary className="cursor-pointer text-muted hover:text-text">Novo projeto</summary>
