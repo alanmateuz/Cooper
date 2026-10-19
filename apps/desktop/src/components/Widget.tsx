@@ -84,7 +84,8 @@ export function Widget({
     userId === me ? viewsFromReport(localUsage) : viewsFromRows(data.usage.filter((u) => u.user_id === userId), today, now);
   const awaiting = useMemo(() => awaitingForMe(data, session.user.id), [data, session.user.id]);
 
-  if (mode === "pill") return <Pill people={people} alerts={alerts} awaiting={awaiting.length} onExpand={() => setMode("compact")} />;
+  if (mode === "pill")
+    return <Pill people={people} me={me} usageOf={usageOf} alerts={alerts} awaiting={awaiting.length} onExpand={() => setMode("compact")} />;
 
   const showTab: Tab = mode === "compact" ? "now" : tab;
 

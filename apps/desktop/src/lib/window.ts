@@ -4,7 +4,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 export type WidgetMode = "pill" | "compact" | "expanded";
 
 export const WINDOW_SIZES: Record<WidgetMode, { width: number; height: number }> = {
-  pill: { width: 220, height: 44 },
+  pill: { width: 340, height: 44 },
   compact: { width: 360, height: 520 },
   expanded: { width: 360, height: 520 },
 };
