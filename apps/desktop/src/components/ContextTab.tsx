@@ -11,7 +11,6 @@ import { useEffect, useState } from "react";
 import { timeAgo } from "../lib/format";
 import { supabase } from "../lib/supabase";
 import type { WorkspaceData } from "../lib/useWorkspace";
-import { Empty } from "./OtherTabs";
 import { Icon, SourceBadge } from "./ui";
 
 type Data = WorkspaceData;
@@ -38,7 +37,9 @@ export function ContextTab({ data, me, now }: { data: Data; me: string; now: Dat
     <div className="h-full space-y-1 overflow-y-auto p-2">
       <RecentChanges data={data} me={me} now={now} onShow={(id) => setOpen((o) => ({ ...o, [id]: true }))} />
       {blocks.length === 0 && !adding && (
-        <Empty>Nenhum contexto ainda. Cole um texto (os títulos # viram blocos) ou crie um bloco.</Empty>
+        <p className="px-1 pt-6 pb-2 text-center leading-snug text-muted">
+          Nenhum contexto ainda. Cole um texto (os títulos # viram blocos) ou crie um bloco.
+        </p>
       )}
       {blocks.map((b) => (
         <BlockCard key={b.id} block={b} data={data} now={now} open={open[b.id] ?? false} setOpen={(v) => setOpen((o) => ({ ...o, [b.id]: v }))} />
