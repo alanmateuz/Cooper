@@ -1,14 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
+import { loadServerConfig } from "./config";
 
-declare const __SUPABASE_URL__: string;
-declare const __SUPABASE_ANON_KEY__: string;
+/** Servidor escolhido na tela Setup (ou o de dev). Null = mostrar o Setup. */
+export const serverConfig = loadServerConfig();
+export const isConfigured = serverConfig !== null;
 
-export const SUPABASE_URL = __SUPABASE_URL__;
-export const SUPABASE_ANON_KEY = __SUPABASE_ANON_KEY__;
-export const isConfigured = Boolean(__SUPABASE_URL__ && __SUPABASE_ANON_KEY__);
-
-// Fase 1: a sessão fica no localStorage do webview.
-// TODO(Fase 2): mover o refresh token para o chaveiro do SO (crate keyring).
-export const supabase = createClient(__SUPABASE_URL__ || "http://invalid.local", __SUPABASE_ANON_KEY__ || "missing", {
+// A sessão fica no localStorage do webview.
+// TODO: mover o refresh token para o chaveiro do SO (crate keyring).
+export const supabase = createClient(serverConfig?.url ?? "http://invalid.local", serverConfig?.anonKey ?? "missing", {
   auth: { persistSession: true, autoRefreshToken: true },
 });

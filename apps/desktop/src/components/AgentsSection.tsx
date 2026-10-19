@@ -1,7 +1,7 @@
 import { AGENT_KINDS, AGENT_LABELS, type AgentKind } from "@cooper/shared";
 import { useCallback, useEffect, useState } from "react";
 import { timeAgo } from "../lib/format";
-import { SUPABASE_ANON_KEY, SUPABASE_URL, supabase } from "../lib/supabase";
+import { serverConfig, supabase } from "../lib/supabase";
 import { inTauri } from "../lib/window";
 
 interface Connection {
@@ -17,7 +17,7 @@ interface Connection {
 const CLIENT_ARG: Partial<Record<AgentKind, string>> = { claude_code: "claude-code", codex: "codex" };
 
 function clientCommand(kind: AgentKind, token: string, serverPath: string): string {
-  const env = [`COOPER_TOKEN=${token}`, `COOPER_SUPABASE_URL=${SUPABASE_URL}`, `COOPER_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}`]
+  const env = [`COOPER_TOKEN=${token}`, `COOPER_SUPABASE_URL=${serverConfig?.url ?? ""}`, `COOPER_SUPABASE_ANON_KEY=${serverConfig?.anonKey ?? ""}`]
     .map((e) => `--env ${e}`)
     .join(" ");
   const server = `-- node "${serverPath}"`;
@@ -69,8 +69,8 @@ export function AgentsSection({ workspaceId, now }: { workspaceId: string; now: 
       const r = await invoke<{ file: string; backup: string | null }>("connect_agent", {
         kind: created.kind,
         token: created.token,
-        url: SUPABASE_URL,
-        anon: SUPABASE_ANON_KEY,
+        url: serverConfig?.url ?? "",
+        anon: serverConfig?.anonKey ?? "",
       });
       const me = (await supabase.auth.getUser()).data.user?.id;
       if (me) {

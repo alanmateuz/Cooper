@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { timeAgo } from "../lib/format";
-import { supabase } from "../lib/supabase";
+import { encodeConnectionCode } from "../lib/config";
+import { serverConfig, supabase } from "../lib/supabase";
 import { AVATAR_COLORS } from "../lib/people";
 import type { WorkspaceData } from "../lib/useWorkspace";
 
@@ -165,7 +166,10 @@ export function MembersSection({ data, me, now, onProfileChange }: { data: Works
             const { error } = await supabase.from("workspace_invites").insert({ workspace_id: ws.id, email: clean, invited_by: me });
             if (error) return setMsg({ ok: false, text: error.code === "23505" ? "Esse e-mail já foi convidado." : error.message });
             setEmail("");
-            setMsg({ ok: true, text: `Convite criado. Avise ${clean} para instalar o Cooper e entrar com esse e-mail.` });
+            setMsg({
+              ok: true,
+              text: `Convite criado. Mande para ${clean} o instalador do Cooper e o código de conexão (botão abaixo). Ela cola o código na primeira tela, cria a conta com esse e-mail e aceita o convite.`,
+            });
             void load();
           }}
         >
@@ -180,8 +184,26 @@ export function MembersSection({ data, me, now, onProfileChange }: { data: Works
           <button className="rounded-md bg-accent px-2 text-white">Convidar</button>
         </form>
       )}
-      {msg && <p className={`text-[10.5px] leading-snug ${msg.ok ? "text-run" : "text-red-400"}`}>{msg.text}</p>}
+      {msg && <p className={`text-[10.5px] leading-snug ${msg.ok ? "text-run" : "text-danger"}`}>{msg.text}</p>}
+      <ConnectionCodeButton />
     </section>
+  );
+}
+
+/** Código que aponta para o servidor deste time: quem foi convidado cola na primeira tela do Cooper. */
+function ConnectionCodeButton() {
+  const [copied, setCopied] = useState(false);
+  if (!serverConfig) return null;
+  const code = encodeConnectionCode(serverConfig);
+  return (
+    <button
+      type="button"
+      onClick={() => void navigator.clipboard.writeText(code).then(() => setCopied(true))}
+      className="w-full rounded-md border border-line py-1 text-[10.5px] hover:bg-raised"
+      title="Só tem o endereço do servidor e a chave pública; não dá acesso a nada sem conta e convite."
+    >
+      {copied ? "Código copiado: mande junto com o instalador" : "Copiar código de conexão"}
+    </button>
   );
 }
 

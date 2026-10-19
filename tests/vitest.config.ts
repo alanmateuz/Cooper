@@ -11,7 +11,7 @@ for (const f of [".env", ".env.local"]) {
 
 export default defineConfig({
   test: {
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/*.test.ts"],
     testTimeout: 20_000,
     fileParallelism: false,
   },

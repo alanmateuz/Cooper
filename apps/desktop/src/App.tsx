@@ -1,6 +1,7 @@
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { Login } from "./components/Login";
+import { Setup } from "./components/Setup";
 import { Widget } from "./components/Widget";
 import { pref, setPref } from "./lib/format";
 import { isConfigured, supabase } from "./lib/supabase";
@@ -22,7 +23,7 @@ export function App() {
   }, [theme]);
 
   // Sem sessão a janela fica no tamanho compacto (formulário de login).
-  const effectiveMode: WidgetMode = session ? mode : "compact";
+  const effectiveMode: WidgetMode = isConfigured && session ? mode : "compact";
   useEffect(() => {
     void applyWindowMode(effectiveMode);
   }, [effectiveMode]);
@@ -37,8 +38,8 @@ export function App() {
   };
 
   const content = !isConfigured ? (
-    <div onMouseDown={dragFromMouseDown} className="flex h-full items-center justify-center rounded-xl border border-line bg-bg p-6 text-center text-muted">
-      Configure SUPABASE_URL e SUPABASE_ANON_KEY no .env da raiz e reinicie.
+    <div onMouseDown={dragFromMouseDown} className="h-full rounded-xl border border-line bg-bg">
+      <Setup />
     </div>
   ) : session === undefined ? null : session === null ? (
     // Sem barra de topo no login: a tela toda arrasta (campos e botão não).

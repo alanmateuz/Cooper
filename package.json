@@ -7,14 +7,17 @@
     "dev:web": "pnpm --filter @cooper/desktop dev",
     "dev:desktop": "pnpm --filter @cooper/desktop tauri dev",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm --filter @cooper/shared test",
+    "test": "pnpm -r --if-present test && pnpm test:sql",
     "test:db": "vitest run --config tests/vitest.config.ts",
     "db:push": "node scripts/db-push.mjs",
     "db:seed": "node --env-file=.env scripts/seed.mjs",
     "mcp:build": "pnpm --filter @cooper/mcp-server build",
-    "mcp:config": "pnpm mcp:build && node packages/mcp-server/dist/config.js"
+    "mcp:config": "pnpm mcp:build && node packages/mcp-server/dist/config.js",
+    "test:sql": "vitest run --config tests/sql/vitest.config.ts",
+    "db:install-sql": "node scripts/build-install-sql.mjs"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@supabase/supabase-js": "^2.118.0",
     "@types/node": "^26.6.5",

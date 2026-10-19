@@ -59,10 +59,31 @@ fn validate(token: &str, url: &str, anon: &str) -> Result<(), String> {
     if !ok_token {
         return Err("token em formato inesperado".into());
     }
-    if !url.starts_with("https://") || anon.is_empty() {
+    let local = url.starts_with("http://127.0.0.1:") || url.starts_with("http://localhost:");
+    if !(url.starts_with("https://") || local) || anon.is_empty() {
         return Err("configuração do Supabase ausente".into());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate;
+
+    const TOKEN: &str = "coop_0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    #[test]
+    fn aceita_supabase_hospedado_e_local() {
+        assert!(validate(TOKEN, "https://abc.supabase.co", "eyJ").is_ok());
+        assert!(validate(TOKEN, "http://127.0.0.1:54321", "eyJ").is_ok());
+    }
+
+    #[test]
+    fn recusa_token_ou_servidor_estranho() {
+        assert!(validate("coop_xyz", "https://abc.supabase.co", "eyJ").is_err());
+        assert!(validate(TOKEN, "http://exemplo.com", "eyJ").is_err());
+        assert!(validate(TOKEN, "https://abc.supabase.co", "").is_err());
+    }
 }
 
 fn connect_claude(server: &str, token: &str, url: &str, anon: &str) -> Result<ConnectResult, String> {

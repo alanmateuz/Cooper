@@ -1,6 +1,7 @@
 import type { Workspace } from "@cooper/shared";
 import { useState } from "react";
-import { supabase } from "../lib/supabase";
+import { clearServerConfig, serverHost } from "../lib/config";
+import { serverConfig, supabase } from "../lib/supabase";
 import { CRITICAL_USAGE_PCT } from "../lib/notifications";
 import type { ShareStatus } from "../lib/usage";
 import type { WorkspaceData } from "../lib/useWorkspace";
@@ -48,6 +49,21 @@ export function SettingsTab({
         </Row>
         <Row label="Conta">
           <span className="min-w-0 truncate text-muted" title={email}>{email}</span>
+        </Row>
+        <Row label="Servidor" hint={`Cooper ${__APP_VERSION__}`}>
+          <div className="flex min-w-0 flex-col items-end">
+            <span className="max-w-full truncate text-muted" title={serverConfig?.url}>{serverHost(serverConfig)}</span>
+            <button
+              type="button"
+              onClick={async () => {
+                await supabase.auth.signOut().catch(() => {});
+                clearServerConfig();
+              }}
+              className="text-[10.5px] text-accent hover:underline"
+            >
+              Trocar servidor
+            </button>
+          </div>
         </Row>
         <Row label="Tema">
           <Segmented
