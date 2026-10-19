@@ -50,7 +50,8 @@ export function ClaudeStatusLine() {
       <summary className="cursor-pointer font-medium">Limites do Claude Code</summary>
       <p className="pt-1 text-[10.5px] leading-snug text-muted">
         O Claude Code só informa os limites de 5 h e da semana para a status line (planos Pro e Max). O Cooper instala uma status line que guarda
-        apenas esses números nesta máquina.
+        apenas esses números nesta máquina. Funciona no Claude Code do terminal; o app desktop do Claude não roda status line, então lá só os
+        tokens do dia aparecem.
       </p>
       {!plan && (
         <button type="button" disabled={busy} onClick={() => void call("preview_claude_statusline").then((p) => p && (setPlan(p), setDone(null)))} className="rounded border border-line px-2 py-0.5 hover:bg-raised disabled:opacity-40">

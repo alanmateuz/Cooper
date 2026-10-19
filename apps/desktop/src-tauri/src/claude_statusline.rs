@@ -1,6 +1,8 @@
 //! Instala a status line do Cooper no Claude Code (~/.claude/settings.json), para ler os limites de 5 h e semana.
 //! `preview_claude_statusline` só descreve o que vai acontecer; `install_claude_statusline` roda depois da
-//! confirmação no widget, com backup. Uma status line que já existia é guardada em ~/.cooper/statusline.json:
+//! confirmação no widget, com backup. Testado em 2026-10-18: o Claude Code do terminal (v2.1.299) roda a status line;
+//! o app desktop do Claude (aba Code) não roda, então lá os limites não chegam.
+//! Uma status line que já existia é guardada em ~/.cooper/statusline.json:
 //! o script do Cooper repassa o JSON para ela, e `remove_claude_statusline` a devolve ao lugar.
 
 use std::fs;
