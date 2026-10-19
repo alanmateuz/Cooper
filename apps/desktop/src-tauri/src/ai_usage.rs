@@ -13,11 +13,16 @@
 //! - Limites do Claude Code não estão nos JSONL. Vêm da status line do Cooper (packages/mcp-server/src/cooper-statusline.ts),
 //!   que grava em ~/.cooper/claude-limits.json só `five_hour`/`seven_day` (percentual e reinício).
 //! Linha que não bate com o formato é ignorada; arquivo ilegível também. Nada disso derruba o app.
+//!
+//! Desempenho: o widget pede a leitura a cada 60 s. Cada arquivo fica em cache (posição já lida, tamanho e
+//! acumulador próprio), e a próxima leitura só processa as linhas novas. Relê do zero se o arquivo encolher
+//! ou se o dia mudar. Uma última linha sem quebra de linha (ainda sendo escrita) espera a próxima leitura.
 
 use std::collections::{BTreeSet, HashMap};
 use std::fs::{self, File};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
@@ -226,8 +231,37 @@ fn jsonl_files(root: &Path) -> Vec<(PathBuf, i64)> {
     out
 }
 
-fn lines(path: &Path) -> impl Iterator<Item = String> {
-    File::open(path).ok().map(BufReader::new).into_iter().flat_map(|r| r.lines().map_while(Result::ok))
+/// Posição já lida de um arquivo.
+#[derive(Default, Clone, Copy, Debug, PartialEq)]
+struct Cursor {
+    offset: u64,
+}
+
+/// Linhas completas novas desde `cur.offset`. None se o arquivo encolheu (o chamador relê do zero).
+/// Uma última linha sem '\n' (ainda sendo escrita) não é consumida.
+fn read_new_lines(path: &Path, cur: &mut Cursor) -> Option<Vec<String>> {
+    let len = fs::metadata(path).ok()?.len();
+    if len < cur.offset {
+        return None;
+    }
+    if len == cur.offset {
+        return Some(Vec::new());
+    }
+    let mut f = File::open(path).ok()?;
+    f.seek(SeekFrom::Start(cur.offset)).ok()?;
+    let mut r = BufReader::new(f);
+    let mut out = Vec::new();
+    let mut buf = Vec::new();
+    loop {
+        buf.clear();
+        let n = r.read_until(b'\n', &mut buf).ok()?;
+        if n == 0 || buf.last() != Some(&b'\n') {
+            break; // fim, ou linha incompleta: fica para a próxima leitura
+        }
+        cur.offset += n as u64;
+        out.push(String::from_utf8_lossy(&buf).trim_end_matches(['\r', '\n']).to_string());
+    }
+    Some(out)
 }
 
 // ───────────── Claude Code ─────────────
@@ -303,9 +337,24 @@ fn to_limit(w: Option<CodexWindow>) -> Option<Limit> {
     Some(Limit { used_pct: w.used_percent.clamp(0.0, 100.0), window_minutes: w.window_minutes, resets_at: w.resets_at? })
 }
 
-/// Um arquivo é uma sessão: o total é cumulativo, então soma a diferença entre leituras.
+/// Um arquivo do Codex é uma sessão. Guarda a última leitura cumulativa (`prev`) para continuar de onde parou.
+#[derive(Default)]
+struct CodexFile {
+    prev: Option<CodexTokens>,
+    acc: CodexAcc,
+}
+
+/// Arquivo inteiro de uma vez (usado nos testes).
+#[cfg(test)]
 fn scan_codex_file(acc: &mut CodexAcc, src: impl Iterator<Item = String>, since_ms: i64) {
-    let mut prev: Option<CodexTokens> = None;
+    let mut f = CodexFile { prev: None, acc: std::mem::take(acc) };
+    scan_codex(&mut f, src, since_ms);
+    *acc = f.acc;
+}
+
+/// O total é cumulativo por sessão: soma a diferença entre leituras.
+fn scan_codex(file: &mut CodexFile, src: impl Iterator<Item = String>, since_ms: i64) {
+    let CodexFile { prev, acc } = file;
     for line in src {
         let is_count = line.contains("\"token_count\"");
         if !is_count && !line.contains("\"turn_context\"") {
@@ -325,7 +374,7 @@ fn scan_codex_file(acc: &mut CodexAcc, src: impl Iterator<Item = String>, since_
             continue;
         }
         if let Some(cur) = p.info.and_then(|i| i.total_token_usage) {
-            let delta = match prev {
+            let delta = match *prev {
                 Some(pr) if cur.input_tokens >= pr.input_tokens && cur.output_tokens >= pr.output_tokens => CodexTokens {
                     input_tokens: cur.input_tokens - pr.input_tokens,
                     cached_input_tokens: cur.cached_input_tokens.saturating_sub(pr.cached_input_tokens),
@@ -334,7 +383,7 @@ fn scan_codex_file(acc: &mut CodexAcc, src: impl Iterator<Item = String>, since_
                 },
                 _ => cur, // primeira leitura da sessão, ou contador reiniciado
             };
-            prev = Some(cur);
+            *prev = Some(cur);
             if ts >= since_ms && delta.normalized().total() > 0 {
                 acc.tokens.add(delta.normalized());
                 acc.last_event_at = Some(acc.last_event_at.map_or(ts, |x| x.max(ts)));
@@ -346,6 +395,40 @@ fn scan_codex_file(acc: &mut CodexAcc, src: impl Iterator<Item = String>, since_
             }
         }
     }
+}
+
+/// Junta os acumuladores de vários arquivos do Codex.
+fn merge_codex<'a>(files: impl Iterator<Item = &'a CodexAcc>) -> CodexAcc {
+    let mut out = CodexAcc::default();
+    for a in files {
+        out.tokens.add(a.tokens);
+        for m in &a.models {
+            add_model(&mut out.models, Some(m));
+        }
+        if let Some(t) = a.last_event_at {
+            out.last_event_at = Some(out.last_event_at.map_or(t, |x| x.max(t)));
+        }
+        if let Some((t, p, s)) = &a.limits {
+            if out.limits.as_ref().is_none_or(|(ot, _, _)| t >= ot) {
+                out.limits = Some((*t, p.clone(), s.clone()));
+            }
+        }
+    }
+    out
+}
+
+/// Junta os acumuladores de vários arquivos do Claude Code. A mesma resposta pode aparecer em mais de um
+/// arquivo (sessão retomada copia o histórico): fica uma por id, a de horário mais recente.
+fn merge_claude<'a>(files: impl Iterator<Item = &'a ClaudeAcc>) -> ClaudeAcc {
+    let mut out = ClaudeAcc::default();
+    for a in files {
+        for (k, v) in &a.by_id {
+            if out.by_id.get(k).is_none_or(|cur| v.1 >= cur.1) {
+                out.by_id.insert(k.clone(), v.clone());
+            }
+        }
+    }
+    out
 }
 
 fn finish_codex(acc: CodexAcc, now_s: i64) -> Option<AgentUsage> {
@@ -416,36 +499,68 @@ fn codex_root() -> Option<PathBuf> {
     Some(base.join("sessions"))
 }
 
+/// Estado entre leituras: um cursor e um acumulador por arquivo, válidos para um `since_ms` (o dia).
+#[derive(Default)]
+struct UsageCache {
+    since_ms: i64,
+    claude: HashMap<PathBuf, (Cursor, ClaudeAcc)>,
+    codex: HashMap<PathBuf, (Cursor, CodexFile)>,
+}
+
+fn cache() -> &'static Mutex<UsageCache> {
+    static CACHE: OnceLock<Mutex<UsageCache>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(UsageCache::default()))
+}
+
+/// Lê só o que é novo em cada arquivo pedido; arquivo que encolheu recomeça do zero; os que saíram da lista são esquecidos.
+fn refresh<S: Default>(states: &mut HashMap<PathBuf, (Cursor, S)>, wanted: &[PathBuf], mut scan: impl FnMut(&mut S, Vec<String>)) {
+    states.retain(|p, _| wanted.contains(p));
+    for path in wanted {
+        let entry = states.entry(path.clone()).or_default();
+        let lines = match read_new_lines(path, &mut entry.0) {
+            Some(l) => l,
+            None => {
+                *entry = Default::default();
+                read_new_lines(path, &mut entry.0).unwrap_or_default()
+            }
+        };
+        if !lines.is_empty() {
+            scan(&mut entry.1, lines);
+        }
+    }
+}
+
+fn read_usage(cache: &mut UsageCache, claude_root: Option<PathBuf>, codex_root: Option<PathBuf>, limits_raw: Option<String>, since_ms: i64, now_s: i64) -> UsageReport {
+    if cache.since_ms != since_ms {
+        *cache = UsageCache { since_ms, ..Default::default() }; // dia novo: recomeça
+    }
+    let mut report = UsageReport::default();
+
+    if let Some(root) = claude_root {
+        let wanted: Vec<PathBuf> = jsonl_files(&root).into_iter().filter(|(_, m)| *m >= since_ms).map(|(p, _)| p).collect();
+        refresh(&mut cache.claude, &wanted, |acc, lines| scan_claude(acc, lines.into_iter(), since_ms));
+        let merged = merge_claude(cache.claude.values().map(|(_, a)| a));
+        report.claude_code = with_claude_limits(finish_claude(merged), limits_raw.as_deref(), now_s);
+    }
+
+    if let Some(root) = codex_root {
+        let mut files = jsonl_files(&root);
+        files.sort_by_key(|(_, m)| std::cmp::Reverse(*m));
+        // arquivos de hoje, e sempre o mais recente (os limites semanais valem por vários dias)
+        let wanted: Vec<PathBuf> = files.iter().enumerate().filter(|(i, (_, m))| *m >= since_ms || *i == 0).map(|(_, (p, _))| p.clone()).collect();
+        refresh(&mut cache.codex, &wanted, |f, lines| scan_codex(f, lines.into_iter(), since_ms));
+        report.codex = finish_codex(merge_codex(cache.codex.values().map(|(_, f)| &f.acc)), now_s);
+    }
+    report
+}
+
 /// `since_ms`: início do dia local, calculado pelo widget.
 #[tauri::command]
 pub async fn read_ai_usage(since_ms: i64) -> UsageReport {
     tauri::async_runtime::spawn_blocking(move || {
-        let mut report = UsageReport::default();
-
-        if let Some(root) = claude_root() {
-            let mut acc = ClaudeAcc::default();
-            for (path, mtime) in jsonl_files(&root) {
-                if mtime >= since_ms {
-                    scan_claude(&mut acc, lines(&path), since_ms);
-                }
-            }
-            let limits = cooper_dir().and_then(|d| fs::read_to_string(d.join("claude-limits.json")).ok());
-            report.claude_code = with_claude_limits(finish_claude(acc), limits.as_deref(), now_secs());
-        }
-
-        if let Some(root) = codex_root() {
-            let mut acc = CodexAcc::default();
-            let mut files = jsonl_files(&root);
-            files.sort_by_key(|(_, m)| std::cmp::Reverse(*m));
-            // arquivos de hoje, e sempre o mais recente (os limites semanais valem por vários dias)
-            for (i, (path, mtime)) in files.iter().enumerate() {
-                if *mtime >= since_ms || i == 0 {
-                    scan_codex_file(&mut acc, lines(path), since_ms);
-                }
-            }
-            report.codex = finish_codex(acc, now_secs());
-        }
-        report
+        let limits = cooper_dir().and_then(|d| fs::read_to_string(d.join("claude-limits.json")).ok());
+        let mut c = cache().lock().unwrap_or_else(|e| e.into_inner());
+        read_usage(&mut c, claude_root(), codex_root(), limits, since_ms, now_secs())
     })
     .await
     .unwrap_or_default()
@@ -516,8 +631,89 @@ mod tests {
     #[ignore]
     fn arquivos_reais() {
         let since = (now_secs() - 86_400) * 1000;
+        let t0 = std::time::Instant::now();
         let r = tauri::async_runtime::block_on(read_ai_usage(since));
+        let first = t0.elapsed();
+        let t1 = std::time::Instant::now();
+        tauri::async_runtime::block_on(read_ai_usage(since));
+        println!("primeira leitura: {first:?}; segunda (só linhas novas): {:?}", t1.elapsed());
         println!("{}", serde_json::to_string_pretty(&r).unwrap());
+    }
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let d = std::env::temp_dir().join(format!("cooper-usage-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&d);
+        fs::create_dir_all(&d).unwrap();
+        d
+    }
+
+    fn append(path: &Path, s: &str) {
+        use std::io::Write;
+        fs::OpenOptions::new().create(true).append(true).open(path).unwrap().write_all(s.as_bytes()).unwrap();
+    }
+
+    #[test]
+    fn linha_incompleta_espera_a_proxima_leitura() {
+        let p = temp_dir("parcial").join("a.jsonl");
+        append(&p, "um\ndo");
+        let mut c = Cursor::default();
+        assert_eq!(read_new_lines(&p, &mut c).unwrap(), vec!["um"]);
+        assert_eq!(c.offset, 3);
+        append(&p, "is\r\ntrês\n");
+        assert_eq!(read_new_lines(&p, &mut c).unwrap(), vec!["dois", "três"]);
+        assert_eq!(read_new_lines(&p, &mut c).unwrap(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn arquivo_que_encolheu_pede_releitura() {
+        let p = temp_dir("encolheu").join("a.jsonl");
+        append(&p, "x\n");
+        let mut c = Cursor { offset: 100 };
+        assert!(read_new_lines(&p, &mut c).is_none());
+    }
+
+    #[test]
+    fn leitura_incremental_igual_a_leitura_inteira() {
+        let claude = temp_dir("claude");
+        let codex = temp_dir("codex");
+        let cl = |id: &str, out: u64| {
+            format!(r#"{{"type":"assistant","timestamp":"2026-10-18T10:00:00Z","requestId":"r{id}","message":{{"id":"m{id}","model":"claude-opus-5-5","usage":{{"input_tokens":1,"output_tokens":{out}}}}}}}"#) + "\n"
+        };
+        let cx = |ts: &str, input: u64, out: u64| {
+            format!(r#"{{"timestamp":"{ts}","type":"event_msg","payload":{{"type":"token_count","info":{{"total_token_usage":{{"input_tokens":{input},"output_tokens":{out}}}}}}}}}"#) + "\n"
+        };
+        let (cf, xf) = (claude.join("s.jsonl"), codex.join("s.jsonl"));
+        append(&cf, &cl("1", 10));
+        append(&xf, &cx("2026-10-18T09:00:00Z", 100, 10));
+
+        let mut inc = UsageCache::default();
+        let first = read_usage(&mut inc, Some(claude.clone()), Some(codex.clone()), None, SINCE, 0);
+        assert_eq!(first.codex.as_ref().unwrap().tokens.total(), 110);
+
+        // mais linhas: a mesma resposta do Claude atualizada, uma nova, e a sessão do Codex crescendo
+        append(&cf, &cl("1", 30));
+        append(&cf, &cl("2", 5));
+        append(&xf, &cx("2026-10-18T09:05:00Z", 150, 20));
+        let second = read_usage(&mut inc, Some(claude.clone()), Some(codex.clone()), None, SINCE, 0);
+        let full = read_usage(&mut UsageCache::default(), Some(claude), Some(codex), None, SINCE, 0);
+
+        let tok = |r: &UsageReport| (r.claude_code.as_ref().unwrap().tokens, r.codex.as_ref().unwrap().tokens);
+        assert_eq!(tok(&second), tok(&full));
+        assert_eq!(second.claude_code.unwrap().tokens, Tokens { input: 2, output: 35, cache_read: 0, cache_write: 0 });
+        assert_eq!(second.codex.unwrap().tokens.total(), 170);
+    }
+
+    #[test]
+    fn dia_novo_recomeca_o_cache() {
+        let codex = temp_dir("dia");
+        let f = codex.join("s.jsonl");
+        append(&f, r#"{"timestamp":"2026-10-18T09:00:00Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":50,"output_tokens":5}}}}"#);
+        append(&f, "\n");
+        let mut c = UsageCache::default();
+        assert!(read_usage(&mut c, None, Some(codex.clone()), None, SINCE, 0).codex.is_some());
+        let next_day = SINCE + 86_400_000;
+        assert!(read_usage(&mut c, None, Some(codex), None, next_day, 0).codex.is_none(), "uso de ontem não conta hoje");
+        assert_eq!(c.since_ms, next_day);
     }
 
     #[test]

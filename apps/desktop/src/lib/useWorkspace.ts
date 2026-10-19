@@ -13,6 +13,7 @@ import type {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { friendlyError } from "./errors";
 import { distinctColors } from "./people";
+import { applyChange } from "./realtime";
 import { supabase } from "./supabase";
 
 export interface WorkspaceData {
@@ -60,7 +61,8 @@ type Table =
 
 /**
  * Carrega o workspace e mantém tudo atualizado via Realtime.
- * Estratégia simples e robusta: a cada mudança numa tabela, recarrega só aquela tabela.
+ * Cada mudança é aplicada direto no estado (lib/realtime.ts), sem recarregar a tabela;
+ * só os membros recarregam (precisam dos perfis), com debounce.
  */
 export function useWorkspace(paused: boolean) {
   const [data, setData] = useState<WorkspaceData>(EMPTY);
@@ -190,16 +192,28 @@ export function useWorkspace(paused: boolean) {
       return;
     }
     const tables = Object.keys(loaders) as Table[];
+    let membersTimer: ReturnType<typeof setTimeout> | undefined;
     let channel = supabase.channel(`ws:${wsId}`);
     for (const table of tables) {
-      channel = channel.on("postgres_changes", { event: "*", schema: "public", table, filter: `workspace_id=eq.${wsId}` }, () => {
-        if (!pausedRef.current) void reload(table, wsId);
+      channel = channel.on("postgres_changes", { event: "*", schema: "public", table, filter: `workspace_id=eq.${wsId}` }, (payload) => {
+        if (pausedRef.current) return;
+        if (table === "workspace_members") {
+          clearTimeout(membersTimer);
+          membersTimer = setTimeout(() => void reload("workspace_members", wsId), 250);
+          return;
+        }
+        setData((d) =>
+          d.workspace?.id === wsId
+            ? applyChange(d, table, { eventType: payload.eventType, new: payload.new as Record<string, unknown>, old: payload.old as Record<string, unknown> })
+            : d,
+        );
       });
     }
     channel.subscribe((s) => setRealtime(s === "SUBSCRIBED" ? "live" : s === "CLOSED" ? "off" : "connecting"));
     // Ao retomar depois de pausa, recarrega tudo para não perder mudanças.
     for (const t of tables) void reload(t, wsId);
     return () => {
+      clearTimeout(membersTimer);
       void supabase.removeChannel(channel);
     };
   }, [wsId, paused, reload]);
