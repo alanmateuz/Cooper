@@ -185,7 +185,7 @@ export function MembersSection({ data, me, now, onProfileChange }: { data: Works
   );
 }
 
-/** Sua cor no avatar, vista por todo o time. Cores já usadas por outra pessoa do workspace ficam indisponíveis. */
+/** Sua cor no avatar, vista por todo o time. Cor de outra pessoa do workspace fica bloqueada e mostra a inicial dela. */
 function ColorPicker({ data, me, onChange }: { data: WorkspaceData; me: string; onChange?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -202,29 +202,32 @@ function ColorPicker({ data, me, onChange }: { data: WorkspaceData; me: string; 
     onChange?.();
   }
   return (
-    <div className="space-y-1 pb-1">
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-medium">Sua cor</span>
-        <div className="flex flex-wrap justify-end gap-1">
-          {AVATAR_COLORS.map((c) => {
-            const owner = taken.get(c);
-            const selected = mine === c;
-            return (
-              <button
-                key={c}
-                type="button"
-                disabled={busy || !!owner}
-                onClick={() => void pick(c)}
-                title={owner ? `Cor de ${owner}` : selected ? "Sua cor" : "Usar esta cor"}
-                aria-label={owner ? `Cor de ${owner}` : `Cor ${c}`}
-                aria-pressed={selected}
-                className={`h-4 w-4 rounded-full transition-transform disabled:cursor-not-allowed ${selected ? "ring-2 ring-text ring-offset-1 ring-offset-panel" : owner ? "opacity-25" : "hover:scale-110"}`}
-                style={{ background: c }}
-              />
-            );
-          })}
-        </div>
+    <div className="space-y-1.5 pb-1">
+      <span className="font-medium">Sua cor</span>
+      <div className="flex flex-wrap gap-1.5">
+        {AVATAR_COLORS.map((c) => {
+          const owner = taken.get(c);
+          const selected = mine === c;
+          return (
+            <button
+              key={c}
+              type="button"
+              disabled={busy || !!owner}
+              onClick={() => void pick(c)}
+              title={owner ? `Cor de ${owner}` : selected ? "Sua cor" : "Usar esta cor"}
+              aria-label={owner ? `Cor de ${owner}` : `Cor ${c}`}
+              aria-pressed={selected}
+              className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white transition-transform disabled:cursor-not-allowed ${
+                selected ? "ring-2 ring-text ring-offset-2 ring-offset-panel" : owner ? "opacity-40" : "hover:scale-110"
+              }`}
+              style={{ background: c }}
+            >
+              {owner ? owner[0]?.toUpperCase() : ""}
+            </button>
+          );
+        })}
       </div>
+      {taken.size > 0 && <p className="text-[10.5px] leading-snug text-muted">Cores com uma letra já são de alguém do time.</p>}
       {err && <p className="text-[10.5px] text-danger">{err}</p>}
     </div>
   );

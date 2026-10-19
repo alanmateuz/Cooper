@@ -29,8 +29,11 @@ const sessionPresence = (s: AgentSession, now: Date) =>
     now,
   );
 
-/** Cores de avatar: todas leem bem com iniciais brancas, no tema claro e no escuro. */
-export const AVATAR_COLORS = ["#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#ec4899", "#8b5cf6", "#14b8a6", "#f97316", "#65a30d"];
+/**
+ * Cores de avatar: todas leem bem com iniciais brancas, no tema claro e no escuro.
+ * O roxo da paleta (#4f46e5) é diferente do padrão do banco (#6366f1): escolher roxo precisa contar como escolha.
+ */
+export const AVATAR_COLORS = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#ec4899", "#8b5cf6", "#14b8a6", "#f97316", "#65a30d"];
 const DEFAULT_COLOR = "#6366f1";
 
 const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
