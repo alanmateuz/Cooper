@@ -373,6 +373,8 @@ export function describeEvent(type: string, p: Record<string, unknown>, name: (i
       return `iniciou tarefa${p.branch ? ` em ${p.branch}` : ""}`;
     case "report_progress":
       return String(p.text ?? "progresso");
+    case "context_updated":
+      return `${{ create: "criou", update: "atualizou", restore: "restaurou", delete: "apagou" }[String(p.action)] ?? "mudou"} o bloco ${String(p.block_title ?? "")}`;
     case "complete_task":
       return `concluiu: ${String(p.summary ?? "")}`;
     case "status_changed":

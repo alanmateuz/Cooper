@@ -103,13 +103,13 @@ for (const t of taskRows) {
 const [qr, times] = tasks;
 
 await must(
-  admin.from("context_entries").insert([
-    { workspace_id: ws.id, kind: "summary", position: 0, title: "O que é o Hacko",
-      body: "Plataforma de hackathons: inscrição, times, entregas e avaliação." },
-    { workspace_id: ws.id, kind: "architecture", position: 1, title: "Stack",
-      body: "React + Vinext em Cloudflare Workers, D1 (SQLite) com Drizzle, R2 para arquivos, Resend para e-mail." },
-    { workspace_id: ws.id, kind: "convention", position: 2, title: "Branches",
-      body: "claude/<tema> ou codex/<tema>; mencionar #N da tarefa no commit." },
+  admin.from("context_blocks").insert([
+    { workspace_id: ws.id, position: 0, title: "Resumo", updated_by: ids.ALAN,
+      content: "Hacko: plataforma de hackathons com inscrição, times, entregas e avaliação." },
+    { workspace_id: ws.id, position: 1, title: "Arquitetura", updated_by: ids.ALAN,
+      content: "React + Vinext em Cloudflare Workers, D1 (SQLite) com Drizzle, R2 para arquivos, Resend para e-mail." },
+    { workspace_id: ws.id, position: 2, title: "Convenções", updated_by: ids.ALAN,
+      content: "Branches claude/<tema> ou codex/<tema>; mencionar #N da tarefa no commit." },
   ]),
 );
 

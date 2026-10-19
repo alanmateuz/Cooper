@@ -41,7 +41,7 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("RLS por workspace", () => 
 
   it("intruso não vê o workspace nem as tarefas do outro time", async () => {
     expect(await wsByName(intruso, "Hacko (demo)")).toBeNull();
-    for (const table of ["tasks", "task_events", "agent_sessions", "git_snapshots", "context_entries", "workspace_members", "repositories"]) {
+    for (const table of ["tasks", "task_events", "agent_sessions", "git_snapshots", "context_blocks", "workspace_members", "repositories"]) {
       const r = await intruso.from(table).select("*").eq("workspace_id", demoId);
       expect(r.error, table).toBeNull();
       expect(r.data, table).toEqual([]);

@@ -9,7 +9,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 
 const env = {
   token: process.env.COOPER_TOKEN ?? "",
@@ -33,7 +33,9 @@ type Result = { content: { type: "text"; text: string }[]; isError?: boolean };
 async function rpc(fn: string, args: Record<string, unknown> = {}): Promise<Result> {
   const { data, error } = await db.rpc(fn, { p_token: env.token, p_session: session, ...args });
   if (error) return { content: [{ type: "text", text: `Erro do Cooper: ${error.message}` }], isError: true };
-  return { content: [{ type: "text", text: JSON.stringify(data ?? { ok: true }) }] };
+  // Conflito de versão no contexto: nada foi gravado; a resposta traz o conteúdo atual para mesclar.
+  const conflict = !!data && typeof data === "object" && (data as { conflict?: unknown }).conflict === true;
+  return { content: [{ type: "text", text: JSON.stringify(data ?? { ok: true }) }], ...(conflict ? { isError: true } : {}) };
 }
 
 const server = new McpServer(
@@ -49,10 +51,43 @@ server.registerTool(
   "get_workspace_context",
   {
     title: "Contexto do workspace",
-    description: "Resumo do projeto, arquitetura, convenções e decisões técnicas aprovadas. Curto; chame uma vez por sessão.",
-    inputSchema: {},
+    description:
+      "Contexto compartilhado do projeto, em blocos (Resumo, Arquitetura, Convenções, Decisões…). Sem argumentos: só a lista de blocos com versão e uma prévia curta. Com blocks: o conteúdo completo desses blocos. Peça só o que precisar.",
+    inputSchema: {
+      blocks: z.array(z.string().max(120)).max(20).optional().describe("Títulos (ou ids) dos blocos cujo conteúdo você quer"),
+    },
   },
-  () => rpc("mcp_get_workspace_context"),
+  ({ blocks }) => rpc("mcp_get_workspace_context", { p_blocks: blocks?.length ? blocks : null }),
+);
+
+server.registerTool(
+  "update_context_block",
+  {
+    title: "Atualizar bloco de contexto",
+    description:
+      "Substitui o conteúdo de um bloco. Informe base_version (a versão que você leu). Se o bloco mudou nesse meio-tempo, nada é gravado e a resposta traz o conteúdo atual: mescle e envie de novo com a versão nova. A versão anterior fica no histórico e pode ser desfeita no widget.",
+    inputSchema: {
+      block: z.string().min(1).max(120).describe("Título ou id do bloco"),
+      content: z.string().max(20000).describe("Conteúdo completo novo do bloco (não só o trecho alterado)"),
+      base_version: z.number().int().positive().describe("Versão do bloco que você leu"),
+      title: z.string().trim().min(1).max(120).optional().describe("Novo título, se for renomear"),
+    },
+  },
+  ({ block, content, base_version, title }) =>
+    rpc("mcp_update_context_block", { p_block: block, p_content: content, p_base_version: base_version, p_title: title ?? null }),
+);
+
+server.registerTool(
+  "create_context_block",
+  {
+    title: "Criar bloco de contexto",
+    description: "Cria um bloco novo no contexto compartilhado (ex.: \"Contratos de API\"). Prefira atualizar um bloco existente quando o assunto já tiver bloco.",
+    inputSchema: {
+      title: z.string().trim().min(1).max(120),
+      content: z.string().max(20000),
+    },
+  },
+  ({ title, content }) => rpc("mcp_create_context_block", { p_title: title, p_content: content }),
 );
 
 server.registerTool(

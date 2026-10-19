@@ -123,6 +123,7 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("MCP de ponta a ponta: dois
       [
         "get_my_tasks", "get_task_context", "get_team_status", "get_workspace_context", "report_progress", "start_task",
         "create_task", "accept_task", "decline_task", "complete_task",
+        "update_context_block", "create_context_block",
       ].sort(),
     );
   });

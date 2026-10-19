@@ -6,7 +6,8 @@ import { buildPeople } from "../lib/people";
 import { claudeAutoRefreshPref, CLAUDE_AUTO_REFRESH_PREF, refreshClaudeLimits, useClaudeAutoRefresh, useLocalUsage, useShareUsage } from "../lib/usage";
 import { useWorkspace } from "../lib/useWorkspace";
 import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, type WidgetMode } from "../lib/window";
-import { ActivityTab, ContextTab, Empty, PrivacySection, SettingsTab } from "./OtherTabs";
+import { ContextTab } from "./ContextTab";
+import { ActivityTab, Empty, PrivacySection, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
 import { ClaudeStatusLine } from "./ClaudeStatusLine";
 import { CreateWorkspace, MembersSection, Onboarding, PendingInvites } from "./Team";
@@ -144,7 +145,7 @@ export function Widget({
               </div>
             )}
             {showTab === "tasks" && <TasksTab data={data} me={session.user.id} now={now} />}
-            {showTab === "context" && <ContextTab data={data} />}
+            {showTab === "context" && <ContextTab data={data} me={me} now={now} />}
             {showTab === "activity" && <ActivityTab data={data} now={now} />}
             {showTab === "settings" && (
               <SettingsTab

@@ -1,7 +1,7 @@
 import type {
   AgentSession,
   AiUsageRow,
-  ContextEntry,
+  ContextBlock,
   GitSnapshot,
   Profile,
   Task,
@@ -20,7 +20,8 @@ export interface WorkspaceData {
   sessions: AgentSession[];
   snapshots: GitSnapshot[];
   events: TaskEvent[];
-  context: ContextEntry[];
+  /** Blocos de contexto, inclusive apagados (deleted_at), para poder desfazer. */
+  context: ContextBlock[];
   links: TaskLink[];
   /** Uso de IA compartilhado pelos membros (só de quem ligou o compartilhamento). */
   usage: AiUsageRow[];
@@ -43,7 +44,7 @@ type Table =
   | "agent_sessions"
   | "git_snapshots"
   | "task_events"
-  | "context_entries"
+  | "context_blocks"
   | "workspace_members"
   | "task_links"
   | "ai_usage";
@@ -85,9 +86,9 @@ export function useWorkspace(paused: boolean) {
         .order("occurred_at", { ascending: false })
         .limit(40)).data ?? []) as TaskEvent[],
     }),
-    context_entries: async (id) => ({
-      context: ((await supabase.from("context_entries").select("*").eq("workspace_id", id).order("position")).data ??
-        []) as ContextEntry[],
+    context_blocks: async (id) => ({
+      context: ((await supabase.from("context_blocks").select("*").eq("workspace_id", id).order("position")).data ??
+        []) as ContextBlock[],
     }),
     task_links: async (id) => ({
       links: ((await supabase.from("task_links").select("*").eq("workspace_id", id)).data ?? []) as TaskLink[],

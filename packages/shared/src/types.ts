@@ -93,11 +93,41 @@ export interface GitSnapshot {
   observed_at: string;
 }
 
-export interface ContextEntry {
+/** Bloco de contexto livre (Resumo, Arquitetura, Contratos de API…). Escrita só pelas RPCs context_*. */
+export interface ContextBlock {
   id: string;
   workspace_id: string;
-  kind: "summary" | "architecture" | "convention";
   title: string;
-  body: string;
+  content: string;
   position: number;
+  version: number;
+  updated_by: string | null;
+  updated_source: EventSource;
+  updated_agent: AgentKind | null;
+  updated_at: string;
+  created_at: string;
+  deleted_at: string | null;
 }
+
+/** Versão substituída de um bloco: conteúdo que existia, quem tinha escrito e quem substituiu. */
+export interface ContextBlockVersion {
+  id: string;
+  block_id: string;
+  version: number;
+  title: string;
+  content: string;
+  written_by: string | null;
+  written_source: EventSource;
+  written_agent: AgentKind | null;
+  written_at: string;
+  replaced_by: string | null;
+  replaced_source: EventSource;
+  replaced_agent: AgentKind | null;
+  replaced_at: string;
+  action: "update" | "restore" | "delete";
+}
+
+/** Resposta das RPCs de escrita de contexto. `conflict`: o bloco mudou desde base_version; nada foi gravado. */
+export type ContextWriteResult =
+  | { ok: true; id: string; title: string; version: number; unchanged?: boolean }
+  | { ok: false; conflict: true; message: string; current: { id: string; title: string; content: string; version: number; updated_at: string } };

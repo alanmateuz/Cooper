@@ -35,6 +35,10 @@ export const taskEventPayloadSchema = z
     assignee_id: z.string().uuid().optional(),
     reason: z.string().max(500).optional(),
     summary: z.string().max(1000).optional(),
+    block_id: z.string().uuid().optional(),
+    block_title: z.string().max(120).optional(),
+    version: z.number().int().positive().optional(),
+    action: z.enum(["create", "update", "restore", "delete"]).optional(),
   })
   .strict();
 export type TaskEventPayload = z.infer<typeof taskEventPayloadSchema>;

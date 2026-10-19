@@ -8,32 +8,6 @@ import { ProjectInstructions } from "./ProjectInstructions";
 import { describeEvent } from "./TasksTab";
 import { Icon, SourceBadge } from "./ui";
 
-const KIND_LABEL = { summary: "Resumo", architecture: "Arquitetura", convention: "Convenção" } as const;
-
-export function ContextTab({ data }: { data: WorkspaceData }) {
-  const [open, setOpen] = useState<Record<string, boolean>>({});
-  if (data.context.length === 0) return <Empty>Nenhum contexto cadastrado.</Empty>;
-  return (
-    <div className="h-full space-y-1 overflow-y-auto p-2">
-      {data.context.map((c) => {
-        const isOpen = open[c.id] ?? c.kind === "summary";
-        return (
-          <section key={c.id} className="rounded-md border border-line bg-panel">
-            <button type="button" onClick={() => setOpen((o) => ({ ...o, [c.id]: !isOpen }))} className="flex w-full items-center gap-1.5 px-2 py-1.5 text-left">
-              <span className={`text-muted transition-transform ${isOpen ? "rotate-90" : ""}`}>
-                <Icon name="chevron" size={10} />
-              </span>
-              <span className="flex-1 font-medium">{c.title}</span>
-              <span className="text-[10px] text-muted">{KIND_LABEL[c.kind]}</span>
-            </button>
-            {isOpen && <p className="px-2 pb-2 pl-[22px] leading-snug whitespace-pre-wrap text-muted">{c.body}</p>}
-          </section>
-        );
-      })}
-    </div>
-  );
-}
-
 export function ActivityTab({ data, now }: { data: WorkspaceData; now: Date }) {
   if (data.events.length === 0) return <Empty>Nenhum evento ainda.</Empty>;
   const name = (id: string | null) => data.members.find((m) => m.user_id === id)?.profile?.display_name.replace(/\s*\(.*\)/, "") ?? "—";
