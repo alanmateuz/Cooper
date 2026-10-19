@@ -44,7 +44,8 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../../../packages/mcp-server/dist/index.js": "mcp/index.js"
+      "../../../packages/mcp-server/dist/index.js": "mcp/index.js",
+      "../../../packages/mcp-server/dist/cooper-statusline.js": "mcp/cooper-statusline.js"
     },
     "windows": {
       "nsis": {

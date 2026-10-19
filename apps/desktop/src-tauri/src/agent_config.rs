@@ -21,7 +21,7 @@ fn home() -> Result<PathBuf, String> {
     dirs::home_dir().ok_or_else(|| "pasta do usuário não encontrada".into())
 }
 
-fn backup(path: &Path) -> Result<Option<String>, String> {
+pub(crate) fn backup(path: &Path) -> Result<Option<String>, String> {
     if !path.exists() {
         return Ok(None);
     }
@@ -35,7 +35,7 @@ fn backup(path: &Path) -> Result<Option<String>, String> {
 }
 
 /// Escreve num arquivo temporário e renomeia, para nunca deixar o arquivo pela metade.
-fn write_atomic(path: &Path, contents: &str) -> Result<(), String> {
+pub(crate) fn write_atomic(path: &Path, contents: &str) -> Result<(), String> {
     if let Some(dir) = path.parent() {
         fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }

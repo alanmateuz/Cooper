@@ -10,6 +10,8 @@
 //! - Codex: `event_msg` com `payload.type: "token_count"`; `info.total_token_usage` é cumulativo por sessão
 //!   (o uso é a diferença entre leituras) e `input_tokens` já inclui `cached_input_tokens`.
 //!   `rate_limits.primary` é a janela de 5 h e `secondary` a semanal, com `used_percent` e `resets_at` (epoch s).
+//! - Limites do Claude Code não estão nos JSONL. Vêm da status line do Cooper (packages/mcp-server/src/cooper-statusline.ts),
+//!   que grava em ~/.cooper/claude-limits.json só `five_hour`/`seven_day` (percentual e reinício).
 //! Linha que não bate com o formato é ignorada; arquivo ilegível também. Nada disso derruba o app.
 
 use std::collections::{BTreeSet, HashMap};
@@ -354,6 +356,41 @@ fn finish_codex(acc: CodexAcc, now_s: i64) -> Option<AgentUsage> {
     Some(AgentUsage { tokens: acc.tokens, models: acc.models.into_iter().collect(), primary, secondary, last_event_at: acc.last_event_at })
 }
 
+// ───────────── limites do Claude Code (status line) ─────────────
+
+#[derive(Deserialize)]
+struct StatusWindow {
+    used_percentage: f64,
+    resets_at: i64,
+}
+
+#[derive(Deserialize)]
+struct StatusLimits {
+    five_hour: Option<StatusWindow>,
+    seven_day: Option<StatusWindow>,
+}
+
+fn cooper_dir() -> Option<PathBuf> {
+    std::env::var_os("COOPER_HOME").map(PathBuf::from).or_else(|| dirs::home_dir().map(|h| h.join(".cooper")))
+}
+
+/// Junta os limites gravados pela status line ao uso do Claude Code. Reinício já passado = desconhecido.
+fn with_claude_limits(usage: Option<AgentUsage>, raw: Option<&str>, now_s: i64) -> Option<AgentUsage> {
+    let parsed = raw.and_then(|r| serde_json::from_str::<StatusLimits>(r).ok());
+    let lim = |w: Option<StatusWindow>, minutes: u32| {
+        w.filter(|w| w.resets_at > now_s && w.used_percentage.is_finite())
+            .map(|w| Limit { used_pct: w.used_percentage.clamp(0.0, 100.0), window_minutes: Some(minutes), resets_at: w.resets_at })
+    };
+    let (primary, secondary) = parsed.map(|p| (lim(p.five_hour, 300), lim(p.seven_day, 10_080))).unwrap_or((None, None));
+    if usage.is_none() && primary.is_none() && secondary.is_none() {
+        return None;
+    }
+    let mut u = usage.unwrap_or_default();
+    u.primary = primary;
+    u.secondary = secondary;
+    Some(u)
+}
+
 // ───────────── comando ─────────────
 
 fn claude_root() -> Option<PathBuf> {
@@ -379,7 +416,8 @@ pub async fn read_ai_usage(since_ms: i64) -> UsageReport {
                     scan_claude(&mut acc, lines(&path), since_ms);
                 }
             }
-            report.claude_code = finish_claude(acc);
+            let limits = cooper_dir().and_then(|d| fs::read_to_string(d.join("claude-limits.json")).ok());
+            report.claude_code = with_claude_limits(finish_claude(acc), limits.as_deref(), now_secs());
         }
 
         if let Some(root) = codex_root() {
@@ -467,6 +505,17 @@ mod tests {
         let since = (now_secs() - 86_400) * 1000;
         let r = tauri::async_runtime::block_on(read_ai_usage(since));
         println!("{}", serde_json::to_string_pretty(&r).unwrap());
+    }
+
+    #[test]
+    fn limites_da_status_line() {
+        let raw = r#"{"five_hour":{"used_percentage":23.5,"resets_at":2000},"seven_day":{"used_percentage":41.2,"resets_at":500},"observed_at":1}"#;
+        let u = with_claude_limits(None, Some(raw), 1000).unwrap();
+        assert_eq!(u.primary, Some(Limit { used_pct: 23.5, window_minutes: Some(300), resets_at: 2000 }));
+        assert!(u.secondary.is_none(), "reinício já passou");
+        assert_eq!(u.tokens.total(), 0);
+        assert!(with_claude_limits(None, Some("lixo"), 1000).is_none());
+        assert!(with_claude_limits(None, None, 1000).is_none());
     }
 
     #[test]
