@@ -66,7 +66,7 @@ export function Widget({
   const me = session.user.id;
   const sharing = data.members.find((m) => m.user_id === me)?.share_usage ?? false;
   const { report: localUsage, reload: reloadUsage } = useLocalUsage();
-  useShareUsage(localUsage, data.workspace?.id ?? null, me, sharing);
+  const shareStatus = useShareUsage(localUsage, data.workspace?.id ?? null, me, sharing);
   const [autoRefresh, setAutoRefreshState] = useState(claudeAutoRefreshPref);
   const setAutoRefresh = (v: boolean) => {
     setAutoRefreshState(v);
@@ -162,7 +162,7 @@ export function Widget({
                 now={now}
               >
                 <MembersSection data={data} me={session.user.id} now={now} />
-                <PrivacySection workspaceId={data.workspace.id} sharing={sharing} />
+                <PrivacySection workspaceId={data.workspace.id} sharing={sharing} status={shareStatus} />
                 <ClaudeStatusLine autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh} />
                 <PendingInvites onAccepted={(id) => void loadWorkspaces(id)} />
                 <details>

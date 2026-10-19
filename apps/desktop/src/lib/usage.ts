@@ -65,18 +65,45 @@ export function useClaudeAutoRefresh(enabled: boolean, report: UsageReport | nul
 
 export const claudeAutoRefreshPref = () => pref(CLAUDE_AUTO_REFRESH_PREF, false);
 
-/** Envia o uso ao workspace só quando o compartilhamento está ligado, e só quando muda. */
-export function useShareUsage(report: UsageReport | null, workspaceId: string | null, userId: string, sharing: boolean) {
+/** Resultado do último envio, mostrado em ⚙ → Privacidade. */
+export type ShareStatus = { at: Date; error: string | null } | null;
+
+/**
+ * Envia o uso ao workspace só quando o compartilhamento está ligado, e só quando muda.
+ * Só lembra o que foi enviado depois que o banco aceitar: se falhar, tenta de novo na próxima leitura (a cada minuto).
+ */
+export function useShareUsage(report: UsageReport | null, workspaceId: string | null, userId: string, sharing: boolean): ShareStatus {
   const last = useRef("");
+  const sending = useRef(false);
+  const [status, setStatus] = useState<ShareStatus>(null);
   useEffect(() => {
     if (!report || !workspaceId || !sharing) {
       last.current = "";
+      if (!sharing) setStatus(null);
       return;
     }
-    const rows = usageRows(report, workspaceId, userId, localDay().day);
+    if (sending.current) return;
+    let rows;
+    try {
+      rows = usageRows(report, workspaceId, userId, localDay().day);
+    } catch (e) {
+      setStatus({ at: new Date(), error: `dados de uso inválidos: ${e instanceof Error ? e.message : String(e)}` });
+      return;
+    }
     const key = JSON.stringify(rows.map(({ observed_at: _, ...r }) => r));
     if (rows.length === 0 || key === last.current) return;
-    last.current = key;
-    void supabase.from("ai_usage").upsert(rows, { onConflict: "workspace_id,user_id,agent_kind" });
+    sending.current = true;
+    void (async () => {
+      try {
+        const { error } = await supabase.from("ai_usage").upsert(rows, { onConflict: "workspace_id,user_id,agent_kind" });
+        if (!error) last.current = key;
+        setStatus({ at: new Date(), error: error?.message ?? null });
+      } catch (e) {
+        setStatus({ at: new Date(), error: e instanceof Error ? e.message : String(e) });
+      } finally {
+        sending.current = false;
+      }
+    })();
   }, [report, workspaceId, userId, sharing]);
+  return status;
 }

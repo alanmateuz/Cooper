@@ -2,6 +2,7 @@ import { AGENT_LABELS, type Workspace } from "@cooper/shared";
 import { useState } from "react";
 import { timeAgo } from "../lib/format";
 import { supabase } from "../lib/supabase";
+import type { ShareStatus } from "../lib/usage";
 import type { WorkspaceData } from "../lib/useWorkspace";
 import { AgentsSection } from "./AgentsSection";
 import { ProjectInstructions } from "./ProjectInstructions";
@@ -99,7 +100,7 @@ export function SettingsTab({
 }
 
 /** ⚙ → Privacidade. Compartilhar uso é opcional e começa desligado; desligar apaga o que já foi enviado. */
-export function PrivacySection({ workspaceId, sharing }: { workspaceId: string; sharing: boolean }) {
+export function PrivacySection({ workspaceId, sharing, status }: { workspaceId: string; sharing: boolean; status: ShareStatus }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   async function toggle(on: boolean) {
@@ -123,9 +124,20 @@ export function PrivacySection({ workspaceId, sharing }: { workspaceId: string; 
         </span>
       </label>
       {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+      {sharing && (
+        <p className={`text-[10.5px] leading-snug ${status?.error ? "text-red-400" : "text-muted"}`}>
+          {!status
+            ? "Aguardando a primeira leitura de uso desta máquina."
+            : status.error
+              ? `Falha ao enviar às ${hhmm(status.at)}: ${status.error}. Tentando de novo a cada minuto.`
+              : `Último envio às ${hhmm(status.at)}.`}
+        </p>
+      )}
     </section>
   );
 }
+
+const hhmm = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
