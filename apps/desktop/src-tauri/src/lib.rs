@@ -2,6 +2,7 @@ mod agent_config;
 mod ai_usage;
 mod claude_limits;
 mod claude_statusline;
+mod paths;
 mod project_instructions;
 
 use std::sync::atomic::{AtomicBool, Ordering};

@@ -1,6 +1,6 @@
 // Mutações do widget num lugar só. Toda função devolve `null` em caso de sucesso ou a mensagem de erro
 // já traduzida (friendlyError), para o componente só mostrar. As regras de verdade ficam no banco (RLS e triggers).
-import type { Task } from "@cooper/shared";
+import type { ContextWriteResult, Task } from "@cooper/shared";
 import { friendlyError } from "./errors";
 import { supabase } from "./supabase";
 
@@ -80,4 +80,46 @@ export async function revokeAgentConnection(id: string): Result {
   const { data, error } = await supabase.from("agent_connections").update({ revoked_at: new Date().toISOString() }).eq("id", id).select("id");
   if (error) return friendlyError(error);
   return data?.length ? null : "Não foi possível revogar este token.";
+}
+
+// ───── contexto ─────
+// Conflito de versão não é erro: volta como dado ({ ok: false, conflict, current }) para o editor mesclar.
+// Erros de verdade lançam; o componente traduz com friendlyError.
+
+async function ctx(fn: string, args: Record<string, unknown>): Promise<ContextWriteResult> {
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) throw error;
+  return data as ContextWriteResult;
+}
+
+export const contextApi = {
+  create: (workspaceId: string, title: string, content: string) => ctx("context_create", { p_workspace: workspaceId, p_title: title, p_content: content }),
+  update: (blockId: string, title: string | null, content: string, baseVersion: number) =>
+    ctx("context_update", { p_block: blockId, p_title: title, p_content: content, p_base_version: baseVersion }),
+  remove: (blockId: string, baseVersion: number) => ctx("context_delete", { p_block: blockId, p_base_version: baseVersion }),
+  restore: (blockId: string, version: number, baseVersion: number) => ctx("context_restore", { p_block: blockId, p_version: version, p_base_version: baseVersion }),
+};
+
+// ───── agentes e uso ─────
+export async function createAgentToken(workspaceId: string, kind: string): Promise<{ id: string; token: string } | { error: string }> {
+  const { data, error } = await supabase.rpc("create_agent_token", { p_workspace: workspaceId, p_kind: kind, p_label: "widget" });
+  return error ? { error: friendlyError(error) } : (data as { id: string; token: string });
+}
+
+/** Depois de conectar um agente com um token novo, os tokens antigos do mesmo agente deixam de valer. */
+export async function revokeOtherConnections(workspaceId: string, me: string, kind: string, keepId: string): Result {
+  const { error } = await supabase
+    .from("agent_connections")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", me)
+    .eq("agent_kind", kind)
+    .neq("id", keepId)
+    .is("revoked_at", null);
+  return done(error);
+}
+
+export async function setUsageSharing(workspaceId: string, on: boolean): Result {
+  const { error } = await supabase.rpc("set_usage_sharing", { p_workspace: workspaceId, p_on: on });
+  return done(error);
 }

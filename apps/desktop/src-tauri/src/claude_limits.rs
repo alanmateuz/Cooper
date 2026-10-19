@@ -16,7 +16,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
-use crate::agent_config::write_atomic;
+use crate::paths::{cooper_dir, write_atomic};
 
 #[derive(Deserialize)]
 struct Event {
@@ -121,12 +121,6 @@ fn claude_candidates() -> Vec<PathBuf> {
     out
 }
 
-fn cooper_dir() -> Result<PathBuf, String> {
-    std::env::var_os("COOPER_HOME")
-        .map(PathBuf::from)
-        .or_else(|| dirs::home_dir().map(|h| h.join(".cooper")))
-        .ok_or_else(|| "pasta do usuário não encontrada".into())
-}
 
 fn run(exe: &PathBuf, cwd: &PathBuf) -> std::io::Result<String> {
     let mut cmd = Command::new(exe);

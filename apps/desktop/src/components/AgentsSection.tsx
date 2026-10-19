@@ -1,6 +1,6 @@
 import { AGENT_KINDS, AGENT_LABELS, type AgentKind } from "@cooper/shared";
 import { useCallback, useEffect, useState } from "react";
-import { revokeAgentConnection } from "../lib/api";
+import { createAgentToken, revokeAgentConnection, revokeOtherConnections } from "../lib/api";
 import { friendlyError } from "../lib/errors";
 import { timeAgo } from "../lib/format";
 import { serverConfig, supabase } from "../lib/supabase";
@@ -54,9 +54,9 @@ export function AgentsSection({ workspaceId, now }: { workspaceId: string; now: 
 
   async function create() {
     setErr(null);
-    const { data, error } = await supabase.rpc("create_agent_token", { p_workspace: workspaceId, p_kind: kind, p_label: "widget" });
-    if (error) return setErr(friendlyError(error));
-    setCreated({ id: data.id, token: data.token, kind });
+    const r = await createAgentToken(workspaceId, kind);
+    if ("error" in r) return setErr(r.error);
+    setCreated({ id: r.id, token: r.token, kind });
     setCopied(false);
     setConnected(null);
     void load();
@@ -77,14 +77,8 @@ export function AgentsSection({ workspaceId, now }: { workspaceId: string; now: 
       });
       const me = (await supabase.auth.getUser()).data.user?.id;
       if (me) {
-        await supabase
-          .from("agent_connections")
-          .update({ revoked_at: new Date().toISOString() })
-          .eq("workspace_id", workspaceId)
-          .eq("user_id", me)
-          .eq("agent_kind", created.kind)
-          .neq("id", created.id)
-          .is("revoked_at", null);
+        const error = await revokeOtherConnections(workspaceId, me, created.kind, created.id);
+        if (error) setErr(`Conectado, mas não consegui revogar os tokens antigos: ${error}`);
       }
       setConnected(r);
       void load();

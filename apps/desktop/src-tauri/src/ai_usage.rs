@@ -464,9 +464,6 @@ struct StatusLimits {
     observed_at: Option<i64>,
 }
 
-fn cooper_dir() -> Option<PathBuf> {
-    std::env::var_os("COOPER_HOME").map(PathBuf::from).or_else(|| dirs::home_dir().map(|h| h.join(".cooper")))
-}
 
 /// Junta os limites gravados pela status line ao uso do Claude Code. Reinício já passado = desconhecido.
 fn with_claude_limits(usage: Option<AgentUsage>, raw: Option<&str>, now_s: i64) -> Option<AgentUsage> {
@@ -558,7 +555,7 @@ fn read_usage(cache: &mut UsageCache, claude_root: Option<PathBuf>, codex_root: 
 #[tauri::command]
 pub async fn read_ai_usage(since_ms: i64) -> UsageReport {
     tauri::async_runtime::spawn_blocking(move || {
-        let limits = cooper_dir().and_then(|d| fs::read_to_string(d.join("claude-limits.json")).ok());
+        let limits = crate::paths::cooper_dir().ok().and_then(|d| fs::read_to_string(d.join("claude-limits.json")).ok());
         let mut c = cache().lock().unwrap_or_else(|e| e.into_inner());
         read_usage(&mut c, claude_root(), codex_root(), limits, since_ms, now_secs())
     })

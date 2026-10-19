@@ -3,11 +3,12 @@
 //! Sempre faz backup antes e preserva o resto do arquivo (ordem das chaves e formatação).
 
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::path::PathBuf;
 
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
+
+use crate::paths::{backup, write_atomic};
 
 #[derive(Serialize)]
 pub struct ConnectResult {
@@ -19,29 +20,6 @@ pub struct ConnectResult {
 
 fn home() -> Result<PathBuf, String> {
     dirs::home_dir().ok_or_else(|| "pasta do usuário não encontrada".into())
-}
-
-pub(crate) fn backup(path: &Path) -> Result<Option<String>, String> {
-    if !path.exists() {
-        return Ok(None);
-    }
-    let ts = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
-    let bak = path.with_file_name(format!(
-        "{}.bak-cooper-{ts}",
-        path.file_name().and_then(|n| n.to_str()).unwrap_or("config")
-    ));
-    fs::copy(path, &bak).map_err(|e| format!("não consegui fazer backup: {e}"))?;
-    Ok(Some(bak.display().to_string()))
-}
-
-/// Escreve num arquivo temporário e renomeia, para nunca deixar o arquivo pela metade.
-pub(crate) fn write_atomic(path: &Path, contents: &str) -> Result<(), String> {
-    if let Some(dir) = path.parent() {
-        fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-    }
-    let tmp = path.with_extension("cooper-tmp");
-    fs::write(&tmp, contents).map_err(|e| e.to_string())?;
-    fs::rename(&tmp, path).map_err(|e| e.to_string())
 }
 
 fn server_path(app: &AppHandle) -> Result<String, String> {

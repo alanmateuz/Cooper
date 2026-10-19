@@ -12,7 +12,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
 
-use crate::agent_config::{backup, write_atomic};
+use crate::paths::{backup, cooper_dir, write_atomic};
 
 const MARK: &str = "cooper-statusline";
 
@@ -36,12 +36,6 @@ fn settings_path() -> Result<PathBuf, String> {
     Ok(base.join("settings.json"))
 }
 
-fn cooper_dir() -> Result<PathBuf, String> {
-    std::env::var_os("COOPER_HOME")
-        .map(PathBuf::from)
-        .or_else(|| dirs::home_dir().map(|h| h.join(".cooper")))
-        .ok_or_else(|| "pasta do usuário não encontrada".into())
-}
 
 fn our_command(app: &AppHandle) -> Result<String, String> {
     let p = app

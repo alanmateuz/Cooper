@@ -1,4 +1,5 @@
 import { AGENT_LABELS, PRESENCE_LABELS, type UsageView } from "@cooper/shared";
+import { shortName } from "../lib/names";
 import type { PersonView } from "../lib/people";
 import { dragFromMouseDown } from "../lib/window";
 import { Avatar, Icon, LogoMark } from "./ui";
@@ -36,7 +37,7 @@ export function Pill({
   const focus = others[0] ?? null; // people já vem ordenado por presença
   const rest = others.slice(1, 4);
   const pct = focus ? fiveHour(usageOf(focus.userId)) : null;
-  const name = focus?.profile.display_name.replace(/\s*\(.*\)/, "") ?? "";
+  const name = focus ? shortName(focus.profile.display_name) : "";
   const line1 = focus?.task ? focus.task.title : "Sem tarefa em andamento";
   const line2 = focus?.session?.activity_text ?? (focus?.session ? AGENT_LABELS[focus.session.agent_kind] : "sem agente conectado");
 

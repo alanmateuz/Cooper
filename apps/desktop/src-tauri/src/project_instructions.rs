@@ -80,9 +80,7 @@ pub fn write_agent_instructions(repo: String, block: String, files: Vec<String>)
         let path = dir.join(name);
         let (next, action) = plan(read(&path)?.as_deref(), &block);
         if action != "unchanged" {
-            let tmp = path.with_extension("cooper-tmp");
-            fs::write(&tmp, &next).map_err(|e| e.to_string())?;
-            fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
+            crate::paths::write_atomic(&path, &next)?;
         }
         done.push(FilePlan { name: (*name).into(), path: path.display().to_string(), action });
     }

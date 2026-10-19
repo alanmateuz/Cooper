@@ -2,6 +2,7 @@ import { AGENT_LABELS, LIMIT_STALE_MS, PRESENCE_LABELS, type AgentKind, type Usa
 import { useState } from "react";
 import { friendlyError } from "../lib/errors";
 import { shortSha, timeAgo } from "../lib/format";
+import { shortName } from "../lib/names";
 import type { PersonView } from "../lib/people";
 import { Avatar, Icon, SourceBadge } from "./ui";
 
@@ -35,7 +36,7 @@ export function TeamCard({
         <Avatar name={p.profile.display_name} color={p.profile.avatar_color} status={p.presence} size={30} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-1.5">
-            <span className="truncate text-[13px] font-semibold">{p.profile.display_name.replace(/\s*\(.*\)/, "")}</span>
+            <span className="truncate text-[13px] font-semibold">{shortName(p.profile.display_name)}</span>
             {isMe && <span className="shrink-0 text-[10.5px] text-muted">você</span>}
             <span className="ml-auto shrink-0 text-[10.5px] text-muted" title={p.lastSeenAt ? new Date(p.lastSeenAt).toLocaleString("pt-BR") : undefined}>
               {p.lastSeenAt ? timeAgo(p.lastSeenAt, now) : ""}
