@@ -41,7 +41,7 @@ export function Widget({
   setTheme: (t: "dark" | "light") => void;
 }) {
   const [paused, setPaused] = useState(false);
-  const { data, workspaces, status, realtime, error, selectWorkspace, loadWorkspaces } = useWorkspace(paused);
+  const { data, workspaces, status, realtime, error, selectWorkspace, loadWorkspaces, reload } = useWorkspace(paused);
   const [tab, setTab] = useState<Tab>(() => pref<Tab>("tab", "now"));
   const [dim, setDimState] = useState(() => pref("dim", false));
   const [now, setNow] = useState(() => new Date());
@@ -188,7 +188,7 @@ export function Widget({
                   />
                 </SettingsSection>
                 <SettingsSection title="Equipe">
-                  <MembersSection data={data} me={session.user.id} now={now} />
+                  <MembersSection data={data} me={session.user.id} now={now} onProfileChange={() => void reload("workspace_members", data.workspace!.id)} />
                   <PendingInvites onAccepted={(id) => void loadWorkspaces(id)} />
                 </SettingsSection>
                 <SettingsSection title="Uso de IA">

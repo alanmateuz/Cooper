@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { timeAgo } from "../lib/format";
 import { supabase } from "../lib/supabase";
+import { AVATAR_COLORS } from "../lib/people";
 import type { WorkspaceData } from "../lib/useWorkspace";
 
 interface PendingInvite {
@@ -104,7 +105,7 @@ interface Invite {
 }
 
 /** Configurações → Membros: lista, convites pendentes e convidar por e-mail (só dono convida). */
-export function MembersSection({ data, me, now }: { data: WorkspaceData; me: string; now: Date }) {
+export function MembersSection({ data, me, now, onProfileChange }: { data: WorkspaceData; me: string; now: Date; onProfileChange?: () => void }) {
   const ws = data.workspace!;
   const isOwner = data.members.some((m) => m.user_id === me && m.role === "owner");
   const [invites, setInvites] = useState<Invite[]>([]);
@@ -124,10 +125,14 @@ export function MembersSection({ data, me, now }: { data: WorkspaceData; me: str
 
   return (
     <section className="space-y-1.5">
+      <ColorPicker data={data} me={me} onChange={onProfileChange} />
       {data.members.map((m) => (
         <div key={m.user_id} className="flex items-center gap-1.5 text-[10.5px]">
-          <span className="h-2 w-2 rounded-full" style={{ background: m.profile?.avatar_color ?? "#64748b" }} />
-          <span className="flex-1 truncate">{m.profile?.display_name ?? "—"}</span>
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: m.profile?.avatar_color ?? "#64748b" }} />
+          <span className="flex-1 truncate">
+            {m.profile?.display_name ?? "—"}
+            {m.user_id === me && <span className="text-muted"> (você)</span>}
+          </span>
           <span className="text-muted">{m.role === "owner" ? "dono" : "membro"}</span>
         </div>
       ))}
@@ -177,5 +182,50 @@ export function MembersSection({ data, me, now }: { data: WorkspaceData; me: str
       )}
       {msg && <p className={`text-[10.5px] leading-snug ${msg.ok ? "text-run" : "text-red-400"}`}>{msg.text}</p>}
     </section>
+  );
+}
+
+/** Sua cor no avatar, vista por todo o time. Cores já usadas por outra pessoa do workspace ficam indisponíveis. */
+function ColorPicker({ data, me, onChange }: { data: WorkspaceData; me: string; onChange?: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const mine = data.members.find((m) => m.user_id === me)?.profile?.avatar_color?.toLowerCase();
+  const taken = new Map(
+    data.members.filter((m) => m.user_id !== me && m.profile).map((m) => [m.profile!.avatar_color.toLowerCase(), m.profile!.display_name.replace(/\s*\(.*\)/, "")]),
+  );
+  async function pick(color: string) {
+    setBusy(true);
+    setErr(null);
+    const { error } = await supabase.from("profiles").update({ avatar_color: color }).eq("id", me);
+    setBusy(false);
+    if (error) return setErr(error.message);
+    onChange?.();
+  }
+  return (
+    <div className="space-y-1 pb-1">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-medium">Sua cor</span>
+        <div className="flex flex-wrap justify-end gap-1">
+          {AVATAR_COLORS.map((c) => {
+            const owner = taken.get(c);
+            const selected = mine === c;
+            return (
+              <button
+                key={c}
+                type="button"
+                disabled={busy || !!owner}
+                onClick={() => void pick(c)}
+                title={owner ? `Cor de ${owner}` : selected ? "Sua cor" : "Usar esta cor"}
+                aria-label={owner ? `Cor de ${owner}` : `Cor ${c}`}
+                aria-pressed={selected}
+                className={`h-4 w-4 rounded-full transition-transform disabled:cursor-not-allowed ${selected ? "ring-2 ring-text ring-offset-1 ring-offset-panel" : owner ? "opacity-25" : "hover:scale-110"}`}
+                style={{ background: c }}
+              />
+            );
+          })}
+        </div>
+      </div>
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
+    </div>
   );
 }

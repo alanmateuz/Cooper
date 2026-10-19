@@ -11,6 +11,7 @@ import type {
   WorkspaceMember,
 } from "@cooper/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { distinctColors } from "./people";
 import { supabase } from "./supabase";
 
 export interface WorkspaceData {
@@ -105,7 +106,14 @@ export function useWorkspace(paused: boolean) {
           "id",
           rows.map((r) => r.user_id),
         )).data ?? []) as Profile[];
-      return { members: rows.map((m) => ({ ...m, profile: profiles.find((p) => p.id === m.user_id) ?? null })) };
+      // cor padrão igual para todos confundia as pessoas: cada uma ganha uma cor distinta no workspace
+      const colors = distinctColors(rows.map((r) => ({ user_id: r.user_id, color: profiles.find((p) => p.id === r.user_id)?.avatar_color ?? null })));
+      return {
+        members: rows.map((m) => {
+          const p = profiles.find((x) => x.id === m.user_id);
+          return { ...m, profile: p ? { ...p, avatar_color: colors.get(m.user_id) ?? p.avatar_color } : null };
+        }),
+      };
     },
   };
 
