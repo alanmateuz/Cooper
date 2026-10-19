@@ -1,9 +1,9 @@
-import { AGENT_LABELS, PRESENCE_LABELS } from "@cooper/shared";
+import { AGENT_LABELS, PRESENCE_LABELS, type UsageView } from "@cooper/shared";
 import { shortSha, timeAgo } from "../lib/format";
 import type { PersonView } from "../lib/people";
 import { Avatar, Icon, SourceBadge, StatusDot } from "./ui";
 
-export function TeamCard({ p, now, isMe }: { p: PersonView; now: Date; isMe: boolean }) {
+export function TeamCard({ p, now, isMe, usage }: { p: PersonView; now: Date; isMe: boolean; usage: UsageView[] }) {
   const s = p.session;
   const snap = p.snapshot;
   return (
@@ -62,6 +62,8 @@ export function TeamCard({ p, now, isMe }: { p: PersonView; now: Date; isMe: boo
           <div className="text-[10.5px] text-muted">sem dados de git local</div>
         )}
 
+        <UsageLines usage={usage} now={now} isMe={isMe} />
+
         {p.otherSessions.map(({ session, presence }) => (
           <div key={session.id} className="flex items-center gap-1.5 text-[10.5px] text-muted">
             <StatusDot status={presence} size={6} />
@@ -71,5 +73,50 @@ export function TeamCard({ p, now, isMe }: { p: PersonView; now: Date; isMe: boo
         ))}
       </div>
     </article>
+  );
+}
+
+const compact = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
+const full = new Intl.NumberFormat("pt-BR");
+
+function resetLabel(at: Date, now: Date): string {
+  const sameDay = at.toDateString() === now.toDateString();
+  const time = at.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return sameDay ? time : `${at.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "")} ${time}`;
+}
+
+/** Uso de IA do dia: tokens e, quando o agente informa (hoje só o Codex), os limites. Sem dado, diz isso. */
+function UsageLines({ usage, now, isMe }: { usage: UsageView[]; now: Date; isMe: boolean }) {
+  if (usage.length === 0) return <div className="text-[10.5px] text-muted">sem dados de uso</div>;
+  return (
+    <>
+      {usage.map((u) => (
+        <div key={u.agent} className="space-y-0.5 text-[10.5px] text-muted">
+          <div
+            className="truncate"
+            title={`entrada ${full.format(u.tokens.input)} · saída ${full.format(u.tokens.output)} · cache lido ${full.format(u.tokens.cache_read)} · cache gravado ${full.format(u.tokens.cache_write)}${u.models.length ? `
+${u.models.join(", ")}` : ""}`}
+          >
+            {AGENT_LABELS[u.agent]} · {compact.format(u.totalTokens)} tokens hoje
+            {!isMe && <span> · compartilhado</span>}
+          </div>
+          {u.primary && <LimitBar label="5 h" pct={u.primary.pct} reset={resetLabel(u.primary.resetsAt, now)} />}
+          {u.secondary && <LimitBar label="semana" pct={u.secondary.pct} reset={resetLabel(u.secondary.resetsAt, now)} />}
+        </div>
+      ))}
+    </>
+  );
+}
+
+function LimitBar({ label, pct, reset }: { label: string; pct: number; reset: string }) {
+  const color = pct >= 90 ? "bg-red-400" : pct >= 70 ? "bg-warn" : "bg-accent";
+  return (
+    <div className="flex items-center gap-1.5" title={`${label}: ${pct}% do limite usado; reinicia ${reset}`}>
+      <span className="w-10 shrink-0">{label}</span>
+      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-raised" role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`limite ${label}`}>
+        <span className={`block h-full rounded-full ${color}`} style={{ width: `${Math.min(100, pct)}%` }} />
+      </span>
+      <span className="w-[74px] shrink-0 text-right">{Math.round(pct)}% · {reset}</span>
+    </div>
   );
 }

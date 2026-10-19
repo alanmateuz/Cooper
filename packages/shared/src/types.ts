@@ -22,6 +22,8 @@ export interface WorkspaceMember {
   user_id: string;
   role: "owner" | "member";
   joined_at: string;
+  /** Compartilha o uso de IA com o time (⚙ → Privacidade). Desligado por padrão. */
+  share_usage: boolean;
 }
 
 export interface Task {

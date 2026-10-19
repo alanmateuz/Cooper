@@ -1,10 +1,12 @@
+import { localDay, viewsFromReport, viewsFromRows } from "@cooper/shared";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useMemo, useState } from "react";
 import { pref, setPref } from "../lib/format";
 import { buildPeople } from "../lib/people";
+import { useLocalUsage, useShareUsage } from "../lib/usage";
 import { useWorkspace } from "../lib/useWorkspace";
 import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, type WidgetMode } from "../lib/window";
-import { ActivityTab, ContextTab, Empty, SettingsTab } from "./OtherTabs";
+import { ActivityTab, ContextTab, Empty, PrivacySection, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
 import { CreateWorkspace, MembersSection, Onboarding, PendingInvites } from "./Team";
 import { awaitingForMe, TasksTab } from "./TasksTab";
@@ -59,6 +61,13 @@ export function Widget({
 
   const people = useMemo(() => buildPeople(data, now), [data, now]);
   const alerts = 0; // regras de conflito: Fase 4
+  const me = session.user.id;
+  const sharing = data.members.find((m) => m.user_id === me)?.share_usage ?? false;
+  const localUsage = useLocalUsage();
+  useShareUsage(localUsage, data.workspace?.id ?? null, me, sharing);
+  const today = localDay(now).day;
+  const usageOf = (userId: string) =>
+    userId === me ? viewsFromReport(localUsage) : viewsFromRows(data.usage.filter((u) => u.user_id === userId), today, now);
   const awaiting = useMemo(() => awaitingForMe(data, session.user.id), [data, session.user.id]);
 
   if (mode === "pill") return <Pill people={people} alerts={alerts} onExpand={() => setMode("compact")} />;
@@ -117,7 +126,7 @@ export function Widget({
                   </button>
                 )}
                 {people.map((p) => (
-                  <TeamCard key={p.userId} p={p} now={now} isMe={p.userId === session.user.id} />
+                  <TeamCard key={p.userId} p={p} now={now} isMe={p.userId === me} usage={usageOf(p.userId)} />
                 ))}
               </div>
             )}
@@ -138,6 +147,7 @@ export function Widget({
                 now={now}
               >
                 <MembersSection data={data} me={session.user.id} now={now} />
+                <PrivacySection workspaceId={data.workspace.id} sharing={sharing} />
                 <PendingInvites onAccepted={(id) => void loadWorkspaces(id)} />
                 <details>
                   <summary className="cursor-pointer text-muted hover:text-text">Novo projeto</summary>

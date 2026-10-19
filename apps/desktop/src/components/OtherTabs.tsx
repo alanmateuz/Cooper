@@ -124,6 +124,35 @@ export function SettingsTab({
   );
 }
 
+/** ⚙ → Privacidade. Compartilhar uso é opcional e começa desligado; desligar apaga o que já foi enviado. */
+export function PrivacySection({ workspaceId, sharing }: { workspaceId: string; sharing: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  async function toggle(on: boolean) {
+    setBusy(true);
+    setErr(null);
+    const { error } = await supabase.rpc("set_usage_sharing", { p_workspace: workspaceId, p_on: on });
+    setBusy(false);
+    if (error) setErr(error.message);
+  }
+  return (
+    <section className="space-y-1">
+      <span className="font-medium">Privacidade</span>
+      <label className="flex items-start gap-1.5">
+        <input type="checkbox" className="mt-0.5" checked={sharing} disabled={busy} onChange={(e) => void toggle(e.target.checked)} />
+        <span>
+          Compartilhar meu uso de IA com o time
+          <span className="block text-[10.5px] leading-snug text-muted">
+            Só números do dia: tokens, modelo e percentual de limite. Prompts, respostas e código nunca saem da sua máquina. Desligar apaga o
+            que já foi enviado.
+          </span>
+        </span>
+      </label>
+      {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+    </section>
+  );
+}
+
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">

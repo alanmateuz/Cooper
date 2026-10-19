@@ -183,7 +183,7 @@ describe.skipIf(!SUPABASE_URL || !SUPABASE_ANON_KEY)("tarefas com prompt e aceit
       "status_changed:agent_declared:done",
       "complete_task:agent_declared:",
     ]));
-    expect(ev.at(-1)).toMatchObject({ payload: { summary: "Header pronto com logo e menu." }, evidence: ["pnpm test header"] });
+    expect(ev.find((e) => e.type === "complete_task")).toMatchObject({ payload: { summary: "Header pronto com logo e menu." }, evidence: ["pnpm test header"] });
   }, 40_000);
 
   it("create_task sem responsável vai para quem pediu; nome desconhecido é recusado", async () => {

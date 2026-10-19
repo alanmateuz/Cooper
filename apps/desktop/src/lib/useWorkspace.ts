@@ -1,5 +1,6 @@
 import type {
   AgentSession,
+  AiUsageRow,
   ContextEntry,
   GitSnapshot,
   Profile,
@@ -21,6 +22,8 @@ export interface WorkspaceData {
   events: TaskEvent[];
   context: ContextEntry[];
   links: TaskLink[];
+  /** Uso de IA compartilhado pelos membros (só de quem ligou o compartilhamento). */
+  usage: AiUsageRow[];
 }
 
 const EMPTY: WorkspaceData = {
@@ -32,9 +35,18 @@ const EMPTY: WorkspaceData = {
   events: [],
   context: [],
   links: [],
+  usage: [],
 };
 
-type Table = "tasks" | "agent_sessions" | "git_snapshots" | "task_events" | "context_entries" | "workspace_members" | "task_links";
+type Table =
+  | "tasks"
+  | "agent_sessions"
+  | "git_snapshots"
+  | "task_events"
+  | "context_entries"
+  | "workspace_members"
+  | "task_links"
+  | "ai_usage";
 
 /**
  * Carrega o workspace e mantém tudo atualizado via Realtime.
@@ -79,6 +91,9 @@ export function useWorkspace(paused: boolean) {
     }),
     task_links: async (id) => ({
       links: ((await supabase.from("task_links").select("*").eq("workspace_id", id)).data ?? []) as TaskLink[],
+    }),
+    ai_usage: async (id) => ({
+      usage: ((await supabase.from("ai_usage").select("*").eq("workspace_id", id)).data ?? []) as AiUsageRow[],
     }),
     workspace_members: async (id) => {
       const rows = ((await supabase.from("workspace_members").select("*").eq("workspace_id", id)).data ?? []) as WorkspaceMember[];
@@ -151,7 +166,7 @@ export function useWorkspace(paused: boolean) {
       setRealtime(paused ? "off" : "connecting");
       return;
     }
-    const tables: Table[] = ["tasks", "agent_sessions", "git_snapshots", "task_events", "context_entries", "workspace_members", "task_links"];
+    const tables = Object.keys(loaders) as Table[];
     let channel = supabase.channel(`ws:${wsId}`);
     for (const table of tables) {
       channel = channel.on("postgres_changes", { event: "*", schema: "public", table, filter: `workspace_id=eq.${wsId}` }, () => {

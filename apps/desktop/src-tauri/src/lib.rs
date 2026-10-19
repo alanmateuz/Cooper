@@ -1,4 +1,5 @@
 mod agent_config;
+mod ai_usage;
 mod project_instructions;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -47,6 +48,7 @@ pub fn run() {
         )
         .invoke_handler(tauri::generate_handler![
             agent_config::connect_agent,
+            ai_usage::read_ai_usage,
             project_instructions::preview_agent_instructions,
             project_instructions::write_agent_instructions
         ])
