@@ -23,27 +23,65 @@ const shortName = (d: Data, id: string | null) =>
 /** Tarefas aguardando o meu aceite: o widget mostra o contador na aba. */
 export const awaitingForMe = (d: Data, me: string) => d.tasks.filter((t) => t.assignee_id === me && t.status === "awaiting_acceptance");
 
+type View = "mine" | "theirs" | "nobody";
+
 export function TasksTab({ data, me, now }: { data: Data; me: string; now: Date }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [view, setView] = useState<View>("mine");
   const open = data.tasks.find((t) => t.id === openId) ?? null;
   const others = data.members.filter((m) => m.user_id !== me);
   const otherLabel = others.length === 1 ? `Para ${shortName(data, others[0]!.user_id)}` : "Para o outro";
 
-  const mine = data.tasks.filter((t) => t.assignee_id === me);
-  const theirs = data.tasks.filter((t) => t.assignee_id && t.assignee_id !== me);
-  const nobody = data.tasks.filter((t) => !t.assignee_id);
+  const lists: Record<View, Task[]> = {
+    mine: data.tasks.filter((t) => t.assignee_id === me),
+    theirs: data.tasks.filter((t) => t.assignee_id && t.assignee_id !== me),
+    nobody: data.tasks.filter((t) => !t.assignee_id),
+  };
+  const openCount = (l: Task[]) => l.filter((t) => !CLOSED.includes(t.status)).length;
+  const views: { id: View; label: string }[] = [
+    { id: "mine", label: "Para mim" },
+    { id: "theirs", label: otherLabel },
+    ...(lists.nobody.length > 0 ? [{ id: "nobody" as const, label: "Sem dono" }] : []),
+  ];
 
   return (
     <div className="relative flex h-full flex-col">
       <CreateTask data={data} me={me} />
-      <div className="flex-1 space-y-2 overflow-y-auto px-2 pb-2">
-        <Section title="Para mim" tasks={mine} data={data} me={me} onOpen={setOpenId} />
-        <Section title={otherLabel} tasks={theirs} data={data} me={me} onOpen={setOpenId} />
-        {nobody.length > 0 && <Section title="Sem responsável" tasks={nobody} data={data} me={me} onOpen={setOpenId} />}
+      <div role="tablist" aria-label="De quem são as tarefas" className="mx-2.5 mb-2 flex rounded-lg bg-raised p-0.5">
+        {views.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            role="tab"
+            aria-selected={view === v.id}
+            onClick={() => setView(v.id)}
+            className={`flex flex-1 items-center justify-center gap-1 truncate rounded-md px-2 py-1 text-[11px] ${view === v.id ? "bg-panel font-semibold shadow-sm" : "text-muted hover:text-text"}`}
+          >
+            {v.label}
+            <span className={`text-[10px] ${view === v.id ? "text-accent" : ""}`}>{openCount(lists[v.id])}</span>
+          </button>
+        ))}
+      </div>
+      <div className="flex-1 overflow-y-auto px-2.5 pb-2.5">
+        <TaskList key={view} tasks={lists[view]} data={data} me={me} onOpen={setOpenId} />
       </div>
       {open && <TaskPanel task={open} data={data} me={me} now={now} onClose={() => setOpenId(null)} />}
     </div>
   );
+}
+
+/** Cores de status: só para status que pedem atenção ou mostram progresso. */
+const STATUS_CHIP: Record<TaskStatus, string> = {
+  awaiting_acceptance: "bg-accent/15 text-accent",
+  backlog: "bg-raised text-muted",
+  in_progress: "bg-online/15 text-online",
+  in_review: "bg-warn/15 text-warn",
+  done: "bg-run/15 text-run",
+  declined: "bg-warn/15 text-warn",
+};
+
+export function StatusChip({ status }: { status: TaskStatus }) {
+  return <span className={`shrink-0 rounded-full px-1.5 py-px text-[10px] whitespace-nowrap ${STATUS_CHIP[status]}`}>{TASK_STATUS_LABELS[status]}</span>;
 }
 
 function CreateTask({ data, me }: { data: Data; me: string }) {
@@ -125,63 +163,90 @@ function CreateTask({ data, me }: { data: Data; me: string }) {
           </div>
         </>
       )}
-      {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
     </form>
   );
 }
 
-function Section({ title, tasks, data, me, onOpen }: { title: string; tasks: Task[]; data: Data; me: string; onOpen: (id: string) => void }) {
+const INVITES_SHOWN = 3;
+
+function TaskList({ tasks, data, me, onOpen }: { tasks: Task[]; data: Data; me: string; onOpen: (id: string) => void }) {
   const [showClosed, setShowClosed] = useState(false);
-  const awaiting = tasks.filter((t) => t.status === "awaiting_acceptance");
+  const [allInvites, setAllInvites] = useState(false);
+  const awaiting = tasks.filter((t) => t.status === "awaiting_acceptance").sort((a, b) => b.number - a.number);
   const active = tasks.filter((t) => t.status !== "awaiting_acceptance" && !CLOSED.includes(t.status)).sort((a, b) => ORDER[a.status] - ORDER[b.status] || a.number - b.number);
   const declined = tasks.filter((t) => t.status === "declined");
   const done = tasks.filter((t) => t.status === "done").sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  const shownInvites = allInvites ? awaiting : awaiting.slice(0, INVITES_SHOWN);
 
+  if (tasks.length === 0) return <p className="px-1 pt-6 text-center text-muted">Nenhuma tarefa aqui.</p>;
+  return (
+    <div className="space-y-3">
+      {awaiting.length > 0 && (
+        <Group title={awaiting[0]!.assignee_id === me ? "Aguardando seu aceite" : "Aguardando aceite"} count={awaiting.length}>
+          {shownInvites.map((t) => (
+            <AwaitingCard key={t.id} task={t} data={data} me={me} onOpen={() => onOpen(t.id)} />
+          ))}
+          {awaiting.length > INVITES_SHOWN && (
+            <button type="button" onClick={() => setAllInvites((v) => !v)} className="w-full rounded-md py-1 text-[10.5px] text-accent hover:bg-raised">
+              {allInvites ? "mostrar menos" : `mostrar todos (${awaiting.length})`}
+            </button>
+          )}
+        </Group>
+      )}
+      {declined.length > 0 && (
+        <Group title="Recusadas" count={declined.length}>
+          {declined.map((t) => (
+            <button key={t.id} type="button" onClick={() => onOpen(t.id)} className="block w-full rounded-lg px-2 py-1.5 text-left hover:bg-raised">
+              <div className="flex items-baseline gap-1.5">
+                <span className="shrink-0 text-[10.5px] text-muted tabular-nums">#{t.number}</span>
+                <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                <StatusChip status={t.status} />
+              </div>
+              {t.decline_reason && <p className="truncate pl-6 text-[10.5px] text-muted">“{t.decline_reason}”</p>}
+            </button>
+          ))}
+        </Group>
+      )}
+      {active.length > 0 && (
+        <Group title="Em aberto" count={active.length}>
+          {active.map((t) => (
+            <TaskRow key={t.id} task={t} onOpen={() => onOpen(t.id)} />
+          ))}
+        </Group>
+      )}
+      {done.length > 0 && (
+        <div>
+          <button type="button" onClick={() => setShowClosed((v) => !v)} className="flex items-center gap-1 px-1 text-[10.5px] text-muted hover:text-text">
+            <span className={`transition-transform ${showClosed ? "rotate-90" : ""}`}>
+              <Icon name="chevron" size={9} />
+            </span>
+            Concluídas {done.length}
+          </button>
+          {showClosed && <div className="mt-1">{done.map((t) => <TaskRow key={t.id} task={t} onOpen={() => onOpen(t.id)} />)}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Group({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="flex items-center gap-1 py-1 text-[10.5px] font-semibold tracking-wide text-muted uppercase">
-        {title} <span className="font-normal">{awaiting.length + active.length}</span>
+      <h2 className="mb-1 flex items-center gap-1.5 px-1 text-[10.5px] font-semibold tracking-wide text-muted uppercase">
+        {title} <span className="font-normal">{count}</span>
       </h2>
-      <div className="space-y-1">
-        {awaiting.map((t) => (
-          <AwaitingCard key={t.id} task={t} data={data} me={me} onOpen={() => onOpen(t.id)} />
-        ))}
-        {declined.map((t) => (
-          <button key={t.id} type="button" onClick={() => onOpen(t.id)} className="block w-full rounded-md border border-warn/40 px-1.5 py-1 text-left hover:bg-raised">
-            <div className="flex items-baseline gap-1.5">
-              <span className="shrink-0 text-muted">#{t.number}</span>
-              <span className="min-w-0 flex-1 truncate">{t.title}</span>
-              <span className="shrink-0 text-[10px] text-warn">recusada</span>
-            </div>
-            {t.decline_reason && <p className="truncate pl-5 text-[10.5px] text-muted">“{t.decline_reason}”</p>}
-          </button>
-        ))}
-        {active.map((t) => (
-          <TaskRow key={t.id} task={t} onOpen={() => onOpen(t.id)} />
-        ))}
-        {tasks.length === 0 && <p className="px-1.5 text-[10.5px] text-muted">nenhuma tarefa</p>}
-        {done.length > 0 && (
-          <>
-            <button type="button" onClick={() => setShowClosed((v) => !v)} className="flex items-center gap-1 px-1.5 text-[10.5px] text-muted hover:text-text">
-              <span className={`transition-transform ${showClosed ? "rotate-90" : ""}`}>
-                <Icon name="chevron" size={9} />
-              </span>
-              Concluídas {done.length}
-            </button>
-            {showClosed && done.map((t) => <TaskRow key={t.id} task={t} onOpen={() => onOpen(t.id)} />)}
-          </>
-        )}
-      </div>
+      <div className="space-y-1">{children}</div>
     </section>
   );
 }
 
 function TaskRow({ task, onOpen }: { task: Task; onOpen: () => void }) {
   return (
-    <button type="button" onClick={onOpen} className="flex w-full items-baseline gap-1.5 rounded-md px-1.5 py-1 text-left hover:bg-raised">
-      <span className="shrink-0 text-muted">#{task.number}</span>
+    <button type="button" onClick={onOpen} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-raised">
+      <span className="w-7 shrink-0 text-[10.5px] text-muted tabular-nums">#{task.number}</span>
       <span className={`min-w-0 flex-1 truncate ${task.status === "done" ? "text-muted line-through" : ""}`}>{task.title}</span>
-      <span className="shrink-0 text-[10px] text-muted">{TASK_STATUS_LABELS[task.status]}</span>
+      <StatusChip status={task.status} />
     </button>
   );
 }
@@ -191,31 +256,29 @@ function AwaitingCard({ task, data, me, onOpen }: { task: Task; data: Data; me: 
   const [showPrompt, setShowPrompt] = useState(false);
   const forMe = task.assignee_id === me;
   return (
-    <article className="rounded-md border border-accent/50 bg-panel px-2 py-1.5">
+    <article className="rounded-lg border border-accent/30 bg-accent/5 px-2.5 py-2">
       <button type="button" onClick={onOpen} className="flex w-full items-baseline gap-1.5 text-left">
-        <span className="shrink-0 text-muted">#{task.number}</span>
+        <span className="shrink-0 text-[10.5px] text-muted tabular-nums">#{task.number}</span>
         <span className="min-w-0 flex-1 truncate font-medium">{task.title}</span>
       </button>
-      <p className="text-[10.5px] text-muted">
-        {forMe ? `de ${shortName(data, task.created_by)}` : `aguardando aceite de ${shortName(data, task.assignee_id)}`}
-      </p>
-      {task.prompt && (
-        <div className="mt-0.5">
-          <button type="button" onClick={() => setShowPrompt((v) => !v)} className="flex items-center gap-1 text-[10.5px] text-accent">
-            <span className={`transition-transform ${showPrompt ? "rotate-90" : ""}`}>
-              <Icon name="chevron" size={9} />
-            </span>
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="text-[10.5px] text-muted">
+          {forMe ? `de ${shortName(data, task.created_by)}` : `para ${shortName(data, task.assignee_id)}`}
+        </span>
+        {task.prompt && (
+          <button type="button" onClick={() => setShowPrompt((v) => !v)} className="text-[10.5px] text-accent hover:underline">
             {showPrompt ? "ocultar prompt" : "ver prompt"}
           </button>
-          {showPrompt && <p className="mt-0.5 max-h-40 overflow-y-auto rounded bg-raised px-1.5 py-1 leading-snug whitespace-pre-wrap">{task.prompt}</p>}
-        </div>
-      )}
-      {forMe && <RespondButtons task={task} />}
+        )}
+        {forMe && <RespondButtons task={task} inline />}
+      </div>
+      {showPrompt && <p className="mt-1.5 max-h-40 overflow-y-auto rounded-md bg-panel px-2 py-1.5 leading-snug whitespace-pre-wrap select-text">{task.prompt}</p>}
     </article>
   );
 }
 
-function RespondButtons({ task }: { task: Task }) {
+/** Aceitar / Recusar (com motivo). `inline`: botões à direita da linha do remetente. */
+function RespondButtons({ task, inline }: { task: Task; inline?: boolean }) {
   const [declining, setDeclining] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -233,7 +296,7 @@ function RespondButtons({ task }: { task: Task }) {
     const parsed = declineReasonSchema.safeParse(reason);
     return (
       <form
-        className="mt-1 space-y-1"
+        className={inline ? "basis-full space-y-1" : "mt-1 space-y-1"}
         onSubmit={(e) => {
           e.preventDefault();
           if (parsed.success) void respond({ status: "declined", decline_reason: parsed.data });
@@ -252,21 +315,21 @@ function RespondButtons({ task }: { task: Task }) {
           <button type="button" onClick={() => setDeclining(false)} className="rounded-md px-2 py-0.5 text-muted hover:text-text">Cancelar</button>
           <button disabled={busy || !parsed.success} className="rounded-md border border-warn/60 px-2 py-0.5 text-warn disabled:opacity-40">Recusar</button>
         </div>
-        {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+        {err && <p className="text-[10.5px] text-danger">{err}</p>}
       </form>
     );
   }
   return (
-    <div className="mt-1">
+    <div className={inline ? "ml-auto" : "mt-1"}>
       <div className="flex justify-end gap-1.5">
-        <button type="button" disabled={busy} onClick={() => setDeclining(true)} className="rounded-md border border-line px-2 py-0.5 hover:bg-raised disabled:opacity-40">
+        <button type="button" disabled={busy} onClick={() => setDeclining(true)} className="rounded-md border border-line bg-panel px-2 py-0.5 hover:bg-raised disabled:opacity-40">
           Recusar
         </button>
         <button type="button" disabled={busy} onClick={() => void respond({ status: "backlog" })} className="rounded-md bg-accent px-2 py-0.5 text-white disabled:opacity-40">
           Aceitar
         </button>
       </div>
-      {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
     </div>
   );
 }
@@ -331,7 +394,7 @@ function TaskPanel({ task, data, me, now, onClose }: { task: Task; data: Data; m
             </button>
           </Block>
         )}
-        {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+        {err && <p className="text-[10.5px] text-danger">{err}</p>}
         {task.prompt && <Block title="Prompt">{task.prompt}</Block>}
         {task.description && <Block title="Descrição">{task.description}</Block>}
         {task.acceptance_criteria && <Block title="Critérios de aceite">{task.acceptance_criteria}</Block>}

@@ -14,6 +14,7 @@
   --online: #3b82f6;
   --idle: #9ca3af;
   --warn: #f59e0b;
+  --danger: #f87171;
   color-scheme: dark;
 }
 [data-theme="light"] {
@@ -24,6 +25,8 @@
   --text: #17181c;
   --muted: #6b7080;
   --accent: #5359e6;
+  --warn: #d97706;
+  --danger: #dc2626;
   color-scheme: light;
 }
 
@@ -39,6 +42,7 @@
   --color-online: var(--online);
   --color-idle: var(--idle);
   --color-warn: var(--warn);
+  --color-danger: var(--danger);
   --font-sans: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
 }
 

@@ -17,7 +17,7 @@ type Data = WorkspaceData;
 
 const nameOf = (d: Data, id: string | null) =>
   d.members.find((m) => m.user_id === id)?.profile?.display_name.replace(/\s*\(.*\)/, "") ?? "alguém";
-const who = (d: Data, id: string | null, agent: AgentKind | null) => authorLabel(nameOf(d, id), agent);
+const who = (d: Data, id: string | null, agent: AgentKind | null) => (id ? authorLabel(nameOf(d, id), agent) : "contexto inicial");
 
 async function rpc(fn: string, args: Record<string, unknown>): Promise<ContextWriteResult> {
   const { data, error } = await supabase.rpc(fn, args);
@@ -34,7 +34,7 @@ export function ContextTab({ data, me, now }: { data: Data; me: string; now: Dat
   const blocks = data.context.filter((b) => !b.deleted_at);
 
   return (
-    <div className="h-full space-y-1 overflow-y-auto p-2">
+    <div className="h-full space-y-1.5 overflow-y-auto p-2.5">
       <RecentChanges data={data} me={me} now={now} onShow={(id) => setOpen((o) => ({ ...o, [id]: true }))} />
       {blocks.length === 0 && !adding && (
         <p className="px-1 pt-6 pb-2 text-center leading-snug text-muted">
@@ -83,7 +83,8 @@ function RecentChanges({ data, me, now, onShow }: { data: Data; me: string; now:
   }
 
   return (
-    <section className="space-y-0.5 rounded-md border border-line bg-panel px-2 py-1.5">
+    <section className="space-y-1 rounded-xl border border-accent/30 bg-accent/5 px-3 py-2">
+      <h2 className="text-[10px] font-semibold tracking-wide text-muted uppercase">Mudanças recentes</h2>
       {recent.map((e) => {
         const b = data.context.find((x) => x.id === e.payload.block_id);
         const agent = data.sessions.find((s) => s.id === e.agent_session_id)?.agent_kind ?? null;
@@ -101,11 +102,11 @@ function RecentChanges({ data, me, now, onShow }: { data: Data; me: string; now:
             {canUndo && (
               <button type="button" onClick={() => void undo(e, b!)} className="shrink-0 text-accent hover:underline">desfazer</button>
             )}
-            <SourceBadge source={e.source} />
+            {e.source !== "user" && <SourceBadge source={e.source} />}
           </div>
         );
       })}
-      {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
     </section>
   );
 }
@@ -125,32 +126,37 @@ function BlockCard({ block, data, now, open, setOpen }: { block: ContextBlock; d
   }
 
   return (
-    <section className="rounded-md border border-line bg-panel">
-      <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center gap-1.5 px-2 py-1.5 text-left">
-        <span className={`text-muted transition-transform ${open ? "rotate-90" : ""}`}>
+    <section className="rounded-xl border border-line bg-panel">
+      <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-start gap-2 px-3 py-2 text-left">
+        <span className={`mt-1 text-muted transition-transform ${open ? "rotate-90" : ""}`}>
           <Icon name="chevron" size={10} />
         </span>
-        <span className="min-w-0 flex-1 truncate font-medium">{block.title}</span>
-        <span className="shrink-0 text-[10px] text-muted" title={new Date(block.updated_at).toLocaleString("pt-BR")}>
-          v{block.version} · {who(data, block.updated_by, block.updated_agent)} · {timeAgo(block.updated_at, now)}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-medium">{block.title}</span>
+          <span className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted" title={new Date(block.updated_at).toLocaleString("pt-BR")}>
+            <span className="truncate">
+              {who(data, block.updated_by, block.updated_agent)} · {timeAgo(block.updated_at, now)} · v{block.version}
+            </span>
+            {block.updated_source !== "user" && <SourceBadge source={block.updated_source} />}
+          </span>
         </span>
-        <SourceBadge source={block.updated_source} />
+        {!open && block.content && <span className="mt-0.5 shrink-0 text-[10px] text-muted tabular-nums">{block.content.length.toLocaleString("pt-BR")} car.</span>}
       </button>
       {open && (
-        <div className="space-y-1.5 px-2 pb-2 pl-[22px]">
+        <div className="space-y-2 px-3 pb-3 pl-[30px]">
           {mode === "view" && (
             <>
-              <p className="leading-snug whitespace-pre-wrap text-muted select-text">{block.content || "(vazio)"}</p>
+              <p className="leading-relaxed whitespace-pre-wrap select-text">{block.content || "(vazio)"}</p>
               <div className="flex gap-2 text-[10.5px]">
                 <button type="button" onClick={() => setMode("edit")} className="text-accent hover:underline">editar</button>
                 <button type="button" onClick={() => setMode("history")} className="text-accent hover:underline">histórico</button>
-                <button type="button" onClick={() => void remove()} className="text-muted hover:text-red-400">apagar</button>
+                <button type="button" onClick={() => void remove()} className="text-muted hover:text-danger">apagar</button>
               </div>
             </>
           )}
           {mode === "edit" && <EditBlock block={block} onDone={() => setMode("view")} />}
           {mode === "history" && <History block={block} data={data} now={now} onDone={() => setMode("view")} />}
-          {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+          {err && <p className="text-[10.5px] text-danger">{err}</p>}
         </div>
       )}
     </section>
@@ -221,7 +227,7 @@ function EditBlock({ block, onDone }: { block: ContextBlock; onDone: () => void 
         <button type="button" onClick={onDone} className="rounded-md px-2 py-0.5 text-muted hover:text-text">Cancelar</button>
         <button disabled={busy || !title.trim()} className="rounded-md bg-accent px-2 py-0.5 text-white disabled:opacity-40">Salvar</button>
       </div>
-      {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
     </form>
   );
 }
@@ -277,7 +283,7 @@ function History({ block, data, now, onDone }: { block: ContextBlock; data: Data
           {shown === v.version && <p className="max-h-32 overflow-y-auto rounded bg-raised p-1 whitespace-pre-wrap text-muted select-text">{v.content || "(vazio)"}</p>}
         </div>
       ))}
-      {err && <p className="text-red-400">{err}</p>}
+      {err && <p className="text-danger">{err}</p>}
     </div>
   );
 }
@@ -300,7 +306,7 @@ function NewBlock({ workspaceId, onDone }: { workspaceId: string; onDone: () => 
         <button type="button" onClick={onDone} className="rounded-md px-2 py-0.5 text-muted hover:text-text">Cancelar</button>
         <button disabled={!title.trim()} className="rounded-md bg-accent px-2 py-0.5 text-white disabled:opacity-40">Criar</button>
       </div>
-      {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
     </form>
   );
 }
@@ -360,7 +366,7 @@ function PasteContext({ data, onDone }: { data: Data; onDone: () => void }) {
           Criar {fresh.length} {fresh.length === 1 ? "bloco" : "blocos"}
         </button>
       </div>
-      {err && <p className="text-[10.5px] text-red-400">{err}</p>}
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
     </div>
   );
 }

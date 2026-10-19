@@ -20,18 +20,28 @@ export function StatusDot({ status, size = 8 }: { status: PresenceStatus; size?:
   );
 }
 
+/**
+ * Avatar com selo de presença. "Desconhecido" (sem hooks, sem evidência) não ganha selo:
+ * um círculo vazio não informa nada e parecia uma mancha no avatar.
+ * O anel do selo usa a cor do fundo (--panel) para separar o ponto da foto.
+ */
 export function Avatar({ name, color, status, size = 24 }: { name: string; color: string; status?: PresenceStatus; size?: number }) {
+  const dot = Math.max(7, Math.round(size * 0.28));
   return (
     <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>
       <span
-        className="inline-flex h-full w-full items-center justify-center rounded-full text-[10px] font-semibold text-white"
-        style={{ background: color }}
+        className="inline-flex h-full w-full items-center justify-center rounded-full font-semibold text-white"
+        style={{ background: color, fontSize: Math.round(size * 0.38) }}
       >
         {initials(name)}
       </span>
-      {status && (
-        <span className="absolute -right-0.5 -bottom-0.5 rounded-full bg-panel p-[2px]">
-          <StatusDot status={status} size={7} />
+      {status && status !== "unknown" && (
+        <span
+          className="absolute -right-px -bottom-px rounded-full ring-2 ring-[var(--panel)]"
+          title={PRESENCE_LABELS[status]}
+          style={{ width: dot, height: dot }}
+        >
+          <StatusDot status={status} size={dot} />
         </span>
       )}
     </span>

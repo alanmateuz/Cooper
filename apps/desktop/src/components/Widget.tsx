@@ -84,7 +84,7 @@ export function Widget({
     userId === me ? viewsFromReport(localUsage) : viewsFromRows(data.usage.filter((u) => u.user_id === userId), today, now);
   const awaiting = useMemo(() => awaitingForMe(data, session.user.id), [data, session.user.id]);
 
-  if (mode === "pill") return <Pill people={people} alerts={alerts} onExpand={() => setMode("compact")} />;
+  if (mode === "pill") return <Pill people={people} alerts={alerts} awaiting={awaiting.length} onExpand={() => setMode("compact")} />;
 
   const showTab: Tab = mode === "compact" ? "now" : tab;
 
@@ -121,7 +121,7 @@ export function Widget({
         {status === "ready" && data.workspace && (
           <>
             {showTab === "now" && (
-              <div className="h-full space-y-1.5 overflow-y-auto p-2">
+              <div className="h-full space-y-2 overflow-y-auto p-2.5">
                 {/* alertas de conflito entram aqui (Fase 4) */}
                 {awaiting.length > 0 && (
                   <button
@@ -130,7 +130,7 @@ export function Widget({
                       setTab("tasks");
                       setMode("expanded");
                     }}
-                    className="flex w-full items-center gap-1.5 rounded-lg border border-accent/50 bg-panel px-2.5 py-1.5 text-left hover:bg-raised"
+                    className="flex w-full items-center gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-left hover:bg-accent/15"
                   >
                     <Icon name="list" size={12} />
                     <span className="min-w-0 flex-1 truncate">
@@ -177,7 +177,7 @@ export function Widget({
       </main>
 
       {mode === "expanded" && (
-        <nav className="flex h-9 shrink-0 items-center justify-around border-t border-line">
+        <nav className="flex h-11 shrink-0 items-stretch justify-around border-t border-line px-1">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -186,11 +186,12 @@ export function Widget({
               aria-label={t.label}
               aria-current={tab === t.id}
               onClick={() => setTab(t.id)}
-              className={`relative flex h-7 w-10 items-center justify-center rounded-md ${tab === t.id ? "bg-raised text-accent" : "text-muted hover:text-text"}`}
+              className={`relative my-1 flex flex-1 flex-col items-center justify-center gap-0.5 rounded-md ${tab === t.id ? "bg-raised text-accent" : "text-muted hover:text-text"}`}
             >
-              <Icon name={t.icon} size={15} />
+              <Icon name={t.icon} size={14} />
+              <span className="text-[9.5px] leading-none">{t.label === "Configurações" ? "Ajustes" : t.label}</span>
               {t.id === "tasks" && awaiting.length > 0 && (
-                <span className="absolute top-0 right-1 min-w-3.5 rounded-full bg-accent px-0.5 text-[9px] leading-3.5 font-semibold text-white" aria-label={`${awaiting.length} aguardando aceite`}>
+                <span className="absolute top-0.5 right-[calc(50%-17px)] min-w-3.5 rounded-full bg-accent px-0.5 text-center text-[9px] leading-3.5 font-semibold text-white" aria-label={`${awaiting.length} aguardando aceite`}>
                   {awaiting.length}
                 </span>
               )}
