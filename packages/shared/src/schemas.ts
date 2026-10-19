@@ -39,6 +39,9 @@ export const taskEventPayloadSchema = z
     block_title: z.string().max(120).optional(),
     version: z.number().int().positive().optional(),
     action: z.enum(["create", "update", "restore", "delete"]).optional(),
+    // task_deleted: a tarefa não existe mais, então o evento guarda número e título
+    number: z.number().int().positive().optional(),
+    title: z.string().max(200).optional(),
   })
   .strict();
 export type TaskEventPayload = z.infer<typeof taskEventPayloadSchema>;

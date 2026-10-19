@@ -1,44 +1,12 @@
-import { AGENT_LABELS, type Workspace } from "@cooper/shared";
+import type { Workspace } from "@cooper/shared";
 import { useState } from "react";
-import { timeAgo } from "../lib/format";
 import { supabase } from "../lib/supabase";
 import { CRITICAL_USAGE_PCT } from "../lib/notifications";
 import type { ShareStatus } from "../lib/usage";
 import type { WorkspaceData } from "../lib/useWorkspace";
 import { AgentsSection } from "./AgentsSection";
 import { ProjectInstructions } from "./ProjectInstructions";
-import { describeEvent } from "./TasksTab";
-import { Icon, SourceBadge } from "./ui";
 
-export function ActivityTab({ data, now }: { data: WorkspaceData; now: Date }) {
-  if (data.events.length === 0) return <Empty>Nenhum evento ainda.</Empty>;
-  const name = (id: string | null) => data.members.find((m) => m.user_id === id)?.profile?.display_name.replace(/\s*\(.*\)/, "") ?? "—";
-  const task = (id: string | null) => data.tasks.find((t) => t.id === id);
-  return (
-    <ol className="h-full overflow-y-auto p-2">
-      {data.events.map((e) => {
-        const t = task(e.task_id);
-        const session = data.sessions.find((s) => s.id === e.agent_session_id);
-        return (
-          <li key={e.id} className="flex gap-2 border-b border-line/60 py-1.5 last:border-0">
-            <span className="w-12 shrink-0 pt-px text-[10px] text-muted" title={e.occurred_at}>
-              {timeAgo(e.occurred_at, now)}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="truncate">
-                <span className="font-medium">{name(e.user_id)}</span>
-                {session && <span className="text-muted"> · {AGENT_LABELS[session.agent_kind]}</span>}
-                <span className="text-muted"> · {describeEvent(e.type, e.payload, name)}</span>
-              </div>
-              {t && <div className="truncate text-[10.5px] text-muted">#{t.number} {t.title}</div>}
-            </div>
-            <SourceBadge source={e.source} />
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 export function SettingsTab({
   workspace,

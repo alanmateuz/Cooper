@@ -10,7 +10,8 @@ import { useWorkspace } from "../lib/useWorkspace";
 import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, type WidgetMode } from "../lib/window";
 import { ContextTab } from "./ContextTab";
 import { BellButton, NotificationsPanel } from "./Notifications";
-import { ActivityTab, Empty, NotificationSettings, PrivacySection, SettingsSection, SettingsTab } from "./OtherTabs";
+import { ActivityTab } from "./ActivityTab";
+import { Empty, NotificationSettings, PrivacySection, SettingsSection, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
 import { ClaudeStatusLine } from "./ClaudeStatusLine";
 import { CreateWorkspace, MembersSection, Onboarding, PendingInvites } from "./Team";
@@ -107,6 +108,12 @@ export function Widget({
     notif.markSeen();
   };
   const [focusTask, setFocusTask] = useState<{ id: string; nonce: number } | null>(null);
+  const openTask = (id: string) => {
+    setNotifOpen(null);
+    setFocusTask({ id, nonce: Date.now() });
+    setTab("tasks");
+    setMode("expanded");
+  };
 
   if (mode === "pill")
     return <Pill people={people} me={me} usageOf={usageOf} alerts={alerts} awaiting={awaiting.length} onExpand={() => setMode("compact")} />;
@@ -158,7 +165,7 @@ export function Widget({
               <TasksTab key={focusTask?.nonce ?? 0} data={data} me={session.user.id} now={now} initialOpenId={focusTask?.id ?? null} />
             )}
             {showTab === "context" && <ContextTab data={data} me={me} now={now} />}
-            {showTab === "activity" && <ActivityTab data={data} now={now} />}
+            {showTab === "activity" && <ActivityTab data={data} now={now} onOpenTask={openTask} />}
             {showTab === "settings" && (
               <SettingsTab
                 workspace={data.workspace}
@@ -205,12 +212,7 @@ export function Widget({
             fresh={notifOpen}
             now={now}
             onClose={() => setNotifOpen(null)}
-            onOpenTask={(id) => {
-              setNotifOpen(null);
-              setFocusTask({ id, nonce: Date.now() });
-              setTab("tasks");
-              setMode("expanded");
-            }}
+            onOpenTask={openTask}
           />
         )}
       </main>
