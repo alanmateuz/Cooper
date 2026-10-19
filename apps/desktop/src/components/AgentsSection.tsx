@@ -32,7 +32,9 @@ const WHERE: Partial<Record<AgentKind, string>> = { codex: "~/.codex/config.toml
 export function AgentsSection({ workspaceId, now }: { workspaceId: string; now: Date }) {
   const [list, setList] = useState<Connection[]>([]);
   const [kind, setKind] = useState<AgentKind>("claude_code");
-  const [created, setCreated] = useState<{ token: string; kind: AgentKind } | null>(null);
+  const [created, setCreated] = useState<{ id: string; token: string; kind: AgentKind } | null>(null);
+  const [connected, setConnected] = useState<{ file: string; backup: string | null } | null>(null);
+  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -51,9 +53,43 @@ export function AgentsSection({ workspaceId, now }: { workspaceId: string; now: 
     setErr(null);
     const { data, error } = await supabase.rpc("create_agent_token", { p_workspace: workspaceId, p_kind: kind, p_label: "widget" });
     if (error) return setErr(error.message);
-    setCreated({ token: data.token, kind });
+    setCreated({ id: data.id, token: data.token, kind });
     setCopied(false);
+    setConnected(null);
     void load();
+  }
+
+  // Grava a entrada "cooper" na configuração do agente (Rust, com backup) e revoga tokens antigos do mesmo agente.
+  async function connect() {
+    if (!created) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const r = await invoke<{ file: string; backup: string | null }>("connect_agent", {
+        kind: created.kind,
+        token: created.token,
+        url: SUPABASE_URL,
+        anon: SUPABASE_ANON_KEY,
+      });
+      const me = (await supabase.auth.getUser()).data.user?.id;
+      if (me) {
+        await supabase
+          .from("agent_connections")
+          .update({ revoked_at: new Date().toISOString() })
+          .eq("workspace_id", workspaceId)
+          .eq("user_id", me)
+          .eq("agent_kind", created.kind)
+          .neq("id", created.id)
+          .is("revoked_at", null);
+      }
+      setConnected(r);
+      void load();
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function revoke(id: string) {
@@ -70,6 +106,8 @@ export function AgentsSection({ workspaceId, now }: { workspaceId: string; now: 
       .then((p) => setServerPath(p.replace(/^\\\\\?\\/, "").replaceAll("\\", "/")))
       .catch(() => setServerPath(null));
   }, []);
+
+  const canAutoConnect = inTauri && !!created && (created.kind === "claude_code" || created.kind === "codex");
 
   // Comando para colar no PowerShell. Ele mesmo grava na configuração do cliente; a pessoa vê tudo antes.
   const command = !created
@@ -96,31 +134,48 @@ export function AgentsSection({ workspaceId, now }: { workspaceId: string; now: 
       {err && <p className="text-[10.5px] text-red-400">{err}</p>}
 
       {created && (
-        <div className="space-y-1 rounded-md border border-accent/50 bg-raised p-2">
-          <p className="text-[10.5px] leading-snug">
-            Token de <b>{AGENT_LABELS[created.kind]}</b>. <b>Aparece só agora</b>; o Cooper guarda apenas o hash.{" "}
-            {serverPath ? (
-              <>
-                Cole no PowerShell: o comando adiciona o Cooper em <code>{WHERE[created.kind] ?? "configuração do agente"}</code>.
-                Precisa do Node.js 20+. Depois, abra uma conversa nova no agente.
-              </>
-            ) : (
-              <>Rode na raiz do repositório do Cooper (PowerShell). Sem <code>--write</code> ele só mostra o que vai gravar:</>
-            )}
-          </p>
-          <code className="block max-h-16 overflow-y-auto rounded bg-bg p-1.5 text-[10px] break-all select-text">{command}</code>
-          <div className="flex gap-1.5">
+        <div className="space-y-1.5 rounded-md border border-accent/50 bg-raised p-2">
+          {connected ? (
+            <>
+              <p className="text-[10.5px] leading-snug text-run">
+                Pronto! {AGENT_LABELS[created.kind]} conectado. Abra uma <b>conversa nova</b> nele e peça: “use o cooper: quais são minhas
+                tarefas?”
+              </p>
+              <p className="text-[10px] leading-snug text-muted">
+                Gravado em <code>{connected.file}</code>
+                {connected.backup && <> (backup: <code>{connected.backup.split(/[\\/]/).pop()}</code>)</>}. Tokens antigos deste agente
+                foram revogados.
+              </p>
+            </>
+          ) : canAutoConnect ? (
+            <>
+              <p className="text-[10.5px] leading-snug">
+                Token de <b>{AGENT_LABELS[created.kind]}</b> criado. Clique para o Cooper gravar a conexão em{" "}
+                <code>{WHERE[created.kind]}</code> (faz backup antes). Precisa do Node.js 20+.
+              </p>
+              <button type="button" disabled={busy} onClick={() => void connect()} className="w-full rounded-md bg-accent py-1 font-medium text-white disabled:opacity-50">
+                {busy ? "Conectando…" : `Conectar ao ${AGENT_LABELS[created.kind]}`}
+              </button>
+            </>
+          ) : (
+            <p className="text-[10.5px] leading-snug">
+              Token de <b>{AGENT_LABELS[created.kind]}</b>. <b>Aparece só agora</b>; o Cooper guarda apenas o hash. Use o comando abaixo.
+            </p>
+          )}
+          <details open={!canAutoConnect && !connected}>
+            <summary className="cursor-pointer text-[10px] text-muted hover:text-text">Prefiro copiar o comando (terminal)</summary>
+            <code className="mt-1 block max-h-16 overflow-y-auto rounded bg-bg p-1.5 text-[10px] break-all select-text">{command}</code>
             <button
               type="button"
               onClick={() => void navigator.clipboard.writeText(command).then(() => setCopied(true))}
-              className="rounded border border-line px-2 py-0.5 hover:bg-bg"
+              className="mt-1 rounded border border-line px-2 py-0.5 hover:bg-bg"
             >
               {copied ? "Copiado" : "Copiar comando"}
             </button>
-            <button type="button" onClick={() => setCreated(null)} className="rounded px-2 py-0.5 text-muted hover:text-text">
-              Fechar
-            </button>
-          </div>
+          </details>
+          <button type="button" onClick={() => setCreated(null)} className="text-[10px] text-muted hover:text-text">
+            Fechar
+          </button>
         </div>
       )}
 
