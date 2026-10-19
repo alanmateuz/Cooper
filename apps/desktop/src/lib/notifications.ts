@@ -113,7 +113,7 @@ export function useNotificationState(items: CooperNotification[], ready: boolean
     const fresh = items.filter((i) => !known.current!.has(i.id));
     for (const i of fresh) known.current.add(i.id);
     if (sound && fresh.length > 0) playChime(fresh.some((i) => i.kind === "usage_critical") ? "critical" : "normal");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // dependências omitidas de propósito: só reage a itens novos, não a cada render
   }, [items, ready, sound]);
 
   const seenSet = new Set(seen ?? []);

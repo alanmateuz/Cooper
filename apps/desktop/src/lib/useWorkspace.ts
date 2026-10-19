@@ -138,8 +138,7 @@ export function useWorkspace(paused: boolean) {
         setSyncError(friendlyError(e));
       }
     },
-    // loaders só dependem do cliente supabase (estável)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // loaders só dependem do cliente supabase (estável): dependências vazias de propósito
     [],
   );
 
@@ -158,7 +157,6 @@ export function useWorkspace(paused: boolean) {
       setError(friendlyError(e));
       setStatus("error");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Lista de workspaces do usuário e escolha do último usado (ou de `preferId`).

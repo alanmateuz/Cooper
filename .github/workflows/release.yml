@@ -1,0 +1,39 @@
+name: Release
+
+# Uma tag v* (ex.: v0.6.0) gera o instalador NSIS e cria um rascunho de release com ele.
+# Não precisa de segredo: o app não leva URL nem chave de Supabase (cada pessoa escolhe o servidor no Setup).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tauriScript: pnpm tauri
+          tagName: ${{ github.ref_name }}
+          releaseName: Cooper ${{ github.ref_name }}
+          releaseBody: |
+            Instalador para Windows: `Cooper_*_x64-setup.exe`.
+            Primeira vez? Veja docs/SETUP_SUPABASE.md para criar o servidor do time.
+          releaseDraft: true
+          prerelease: false

@@ -80,21 +80,22 @@ O status **"Executando"** só aparece com evidência recente (hook). Ter uma bra
 
 ## Começar a usar em dupla
 
-**Quem cria o projeto (você):**
-1. Instale e abra o Cooper → **Criar conta**.
-2. Crie o projeto (ex.: "Hacko").
-3. ⚙ → **Membros** → digite o e-mail do seu amigo → **Convidar**.
-4. Mande o instalador do Cooper para ele.
+**Quem começa o time (uma vez):**
+1. Crie o servidor do time no Supabase (grátis): passo a passo em [SETUP_SUPABASE.md](SETUP_SUPABASE.md).
+2. Instale e abra o Cooper → **Criar meu servidor** → cole a URL e a chave anon → **Criar conta**.
+3. Crie o projeto (ex.: "Hacko").
+4. ⚙ → **Equipe** → digite o e-mail do seu amigo → **Convidar** → **Copiar código de conexão**.
+5. Mande para ele o instalador e o código.
 
-**Quem foi convidado (seu amigo):**
-1. Instale e abra o Cooper → **Criar conta**, com **o mesmo e-mail que você convidou**.
-2. Confirme o e-mail pelo link que chegar (se a confirmação estiver ligada no Supabase).
+**Quem foi convidado:**
+1. Instale e abra o Cooper → **Tenho um código de conexão** → cole o código.
+2. **Criar conta**, com **o mesmo e-mail que foi convidado**, e confirme pelo link do e-mail
+   (se a página do link der erro, a conta fica confirmada mesmo assim).
 3. Entre no Cooper: o convite aparece → **Entrar**.
 
 **Cada um conecta o próprio agente:**
-1. ⚙ → **Agentes** → escolha *Codex* ou *Claude Code* → **Gerar token**.
-2. Clique em **Copiar comando** e cole no PowerShell. Isso adiciona o Cooper na configuração do agente.
-3. Abra uma conversa nova no agente e peça, por exemplo: *"use o cooper: quais são minhas tarefas?"*
+1. ⚙ → **Agentes** → escolha *Claude Code* ou *Codex* → **Gerar token** → **Conectar**.
+2. Abra uma conversa nova no agente e peça, por exemplo: *"use o cooper: o que tenho para fazer?"*
 
 Requisito para o passo dos agentes: **Node.js 20 ou mais novo** instalado.
 
@@ -113,10 +114,12 @@ Requisito para o passo dos agentes: **Node.js 20 ou mais novo** instalado.
 | Tarefas compartilhadas em tempo real | ✅ funcionando |
 | Contas, projetos e convites | ✅ funcionando |
 | Agentes conectados por MCP (Codex e Claude Code) | ✅ testado com os dois de verdade |
-| Instalador para Windows | 🔧 sendo gerado |
+| Instalador para Windows | ✅ funcionando (Releases do GitHub) |
+| Cada time com o próprio servidor (Setup, código de conexão) | ✅ funcionando |
+| Editar tarefa, renomear/apagar/sair do projeto, remover membro, trocar senha | ✅ funcionando |
 | Branch, commits e alterações locais reais | ⏳ Fase 3 |
 | GitHub (pushes, PRs, CI) | ⏳ Fase 3 |
 | Status "Executando" real (hooks) e alertas de conflito | ⏳ Fase 4 |
 | Resumos automáticos com IA | ⏳ Fase 5 |
 
-> Hoje, a branch e os "arquivos não commitados" que aparecem no projeto **Hacko (demo)** são **dados de exemplo**. Num projeto criado por vocês, esses campos ficam vazios até a Fase 3.
+> Branch e "arquivos não commitados" só aparecem quando a leitura do git local existir (Fase 3). Até lá, esses campos ficam vazios.
