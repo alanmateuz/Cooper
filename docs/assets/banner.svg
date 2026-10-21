@@ -9,11 +9,7 @@
     <path d="M470 444 A102.5 102.5 0 0 1 367.5 341.5 L367.5 322" stroke="#c77bf9" stroke-width="88"/>
   </g>
   <g font-family="Segoe UI, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif">
-    <text x="360" y="150" fill="#f4f4f6" font-size="76" font-weight="700" letter-spacing="-1">Cooper</text>
-    <text x="364" y="204" fill="#b9bac4" font-size="30">Coordenação em tempo real para times que programam com IA.</text>
-    <text x="364" y="252" fill="#8b5cf6" font-size="22" font-weight="600">Pessoas</text>
-    <text x="460" y="252" fill="#5c5d68" font-size="22">+</text>
-    <text x="486" y="252" fill="#c77bf9" font-size="22" font-weight="600">agentes</text>
-    <text x="584" y="252" fill="#5c5d68" font-size="20">·  mesmas tarefas  ·  mesmo contexto  ·  sem pisar no trabalho do outro</text>
+    <text x="360" y="170" fill="#f4f4f6" font-size="76" font-weight="700" letter-spacing="-1">Cooper</text>
+    <text x="364" y="222" fill="#b9bac4" font-size="30">Painel do time para quem programa com Claude Code e Codex.</text>
   </g>
 </svg>
