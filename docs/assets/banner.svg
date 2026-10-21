@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320">
+  <rect width="1280" height="320" rx="28" fill="#121316"/>
+  <!-- Símbolo do Cooper (mesmo desenho do LogoMark em apps/desktop/src/components/ui.tsx, cores do tema escuro) -->
+  <g transform="translate(80 80) scale(0.4507) translate(-135 -140)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M500 239 L511.5 239 A102.5 102.5 0 0 1 511.5 444 L470 444 A102.5 102.5 0 0 1 367.5 341.5 L367.5 322" stroke="#c77bf9" stroke-width="88"/>
+    <path d="M446 232 Q432 194 398 194 L314 194 A125.5 125.5 0 0 0 314 445 L348 445" stroke="#121316" stroke-width="117"/>
+    <path d="M446 232 Q432 194 398 194 L314 194 A125.5 125.5 0 0 0 314 445 L348 445" stroke="#8b5cf6" stroke-width="97"/>
+    <path d="M470 444 A102.5 102.5 0 0 1 367.5 341.5 L367.5 322" stroke="#121316" stroke-width="108" stroke-linecap="butt"/>
+    <path d="M470 444 A102.5 102.5 0 0 1 367.5 341.5 L367.5 322" stroke="#c77bf9" stroke-width="88"/>
+  </g>
+  <g font-family="Segoe UI, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif">
+    <text x="360" y="150" fill="#f4f4f6" font-size="76" font-weight="700" letter-spacing="-1">Cooper</text>
+    <text x="364" y="204" fill="#b9bac4" font-size="30">Coordenação em tempo real para times que programam com IA.</text>
+    <text x="364" y="252" fill="#8b5cf6" font-size="22" font-weight="600">Pessoas</text>
+    <text x="460" y="252" fill="#5c5d68" font-size="22">+</text>
+    <text x="486" y="252" fill="#c77bf9" font-size="22" font-weight="600">agentes</text>
+    <text x="584" y="252" fill="#5c5d68" font-size="20">·  mesmas tarefas  ·  mesmo contexto  ·  sem pisar no trabalho do outro</text>
+  </g>
+</svg>

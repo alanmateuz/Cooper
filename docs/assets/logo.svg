@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Ícone do Cooper: os dois "C" entrelaçados num quadrado branco, como nos ícones do app -->
+  <rect width="512" height="512" rx="112" fill="#ffffff"/>
+  <g transform="translate(46 115) scale(0.79) translate(-135 -140)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M500 239 L511.5 239 A102.5 102.5 0 0 1 511.5 444 L470 444 A102.5 102.5 0 0 1 367.5 341.5 L367.5 322" stroke="#c77bf9" stroke-width="88"/>
+    <path d="M446 232 Q432 194 398 194 L314 194 A125.5 125.5 0 0 0 314 445 L348 445" stroke="#ffffff" stroke-width="117"/>
+    <path d="M446 232 Q432 194 398 194 L314 194 A125.5 125.5 0 0 0 314 445 L348 445" stroke="#4a03b5" stroke-width="97"/>
+    <path d="M470 444 A102.5 102.5 0 0 1 367.5 341.5 L367.5 322" stroke="#ffffff" stroke-width="108" stroke-linecap="butt"/>
+    <path d="M470 444 A102.5 102.5 0 0 1 367.5 341.5 L367.5 322" stroke="#c77bf9" stroke-width="88"/>
+  </g>
+</svg>
