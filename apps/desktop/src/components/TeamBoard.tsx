@@ -1,14 +1,28 @@
 import type { UsageView } from "@cooper/shared";
+import { useEffect, useState } from "react";
 import type { PersonView } from "../lib/people";
 import { BAR, peakLimit, TeamCard, TEXT, tone } from "./TeamCard";
 import { Avatar } from "./ui";
 
 const shortName = (n: string) => n.replace(/\s*\(.*\)/, "");
 
+type View = "equipe" | "pessoas";
+const VIEW_KEY = "cooper.agoraView";
+const savedView = (): View | null => {
+  try {
+    const v = localStorage.getItem(VIEW_KEY);
+    return v === "equipe" || v === "pessoas" ? v : null;
+  } catch {
+    return null;
+  }
+};
+
 /**
- * Aba Agora: resumo da equipe (com 3 pessoas ou mais) e os cartões em grade.
- * O resumo responde "quem tem folga de IA e em que cada um está", para decidir para quem mandar trabalho;
- * a ordem é a mesma dos cartões (estável, para não pular quando um número muda).
+ * Aba Agora com duas visões, alternadas por um seletor no topo:
+ * - Equipe: lista compacta (folga de IA e tarefa de cada um), para decidir para quem mandar trabalho;
+ *   clicar numa pessoa abre a visão Pessoas no cartão dela.
+ * - Pessoas: os cartões em grade.
+ * A ordem é a mesma nas duas (estável, para não pular quando um número muda).
  */
 export function TeamBoard({
   people,
@@ -23,26 +37,88 @@ export function TeamBoard({
   usageOf: (userId: string) => UsageView[];
   onRefreshClaude?: () => Promise<void>;
 }) {
+  const [view, setView] = useState<View>(() => savedView() ?? (people.length >= 3 ? "equipe" : "pessoas"));
+  const [focus, setFocus] = useState<string | null>(null);
+  const choose = (v: View) => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* sem armazenamento: só não lembra a escolha */
+    }
+  };
+  // depois de trocar para Pessoas, rola até o cartão de quem foi clicado
+  useEffect(() => {
+    if (view !== "pessoas" || !focus) return;
+    document.getElementById(`card-${focus}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setFocus(null);
+  }, [view, focus]);
+
+  const showSwitch = people.length >= 2;
+  const current = showSwitch ? view : "pessoas";
   return (
-    <div className="grid h-full auto-rows-min grid-cols-[repeat(auto-fill,minmax(300px,1fr))] content-start gap-2 overflow-y-auto p-2.5">
-      {people.length >= 3 && <TeamSummary people={people} me={me} usageOf={usageOf} />}
-      {people.map((p) => (
-        <TeamCard
-          key={p.userId}
-          p={p}
-          now={now}
-          isMe={p.userId === me}
-          usage={usageOf(p.userId)}
-          onRefreshClaude={p.userId === me ? onRefreshClaude : undefined}
-        />
-      ))}
+    <div className="flex h-full flex-col">
+      {showSwitch && (
+        <div className="flex shrink-0 items-center px-2.5 pt-2">
+          <div role="tablist" aria-label="Visão" className="inline-flex rounded-md border border-line bg-panel p-0.5 text-[11px]">
+            {(["equipe", "pessoas"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={current === v}
+                onClick={() => choose(v)}
+                className={`rounded px-2.5 py-0.5 transition-colors ${current === v ? "bg-raised font-medium text-text" : "text-muted hover:text-text"}`}
+              >
+                {v === "equipe" ? "Equipe" : "Pessoas"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {current === "equipe" ? (
+        <div key="equipe" className="anim-in min-h-0 flex-1 overflow-y-auto p-2.5">
+          <TeamSummary
+            people={people}
+            me={me}
+            usageOf={usageOf}
+            onOpen={(id) => {
+              setFocus(id);
+              choose("pessoas");
+            }}
+          />
+        </div>
+      ) : (
+        <div key="pessoas" className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(300px,1fr))] content-start gap-2 overflow-y-auto p-2.5">
+          {people.map((p) => (
+            <TeamCard
+              key={p.userId}
+              p={p}
+              now={now}
+              isMe={p.userId === me}
+              usage={usageOf(p.userId)}
+              onRefreshClaude={p.userId === me ? onRefreshClaude : undefined}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function TeamSummary({ people, me, usageOf }: { people: PersonView[]; me: string; usageOf: (userId: string) => UsageView[] }) {
+function TeamSummary({
+  people,
+  me,
+  usageOf,
+  onOpen,
+}: {
+  people: PersonView[];
+  me: string;
+  usageOf: (userId: string) => UsageView[];
+  onOpen: (userId: string) => void;
+}) {
   return (
-    <section className="anim-in col-span-full rounded-xl border border-line bg-panel px-3 py-2" aria-label="Resumo da equipe">
+    <section className="rounded-xl border border-line bg-panel px-3 py-2" aria-label="Resumo da equipe">
       <div className="mb-1 flex items-baseline gap-2 text-[10px] text-muted">
         <span className="font-semibold tracking-wide uppercase">Equipe · {people.length}</span>
         <span className="ml-auto">barra: limite de 5 h · à direita: semana</span>
@@ -54,12 +130,12 @@ function TeamSummary({ people, me, usageOf }: { people: PersonView[]; me: string
           const five = peakLimit(usage.filter((u) => u.primary));
           const week = Math.max(-1, ...usage.map((u) => u.secondary?.pct ?? -1));
           return (
-            <li key={p.userId} className="border-t border-line/60 first:border-t-0 [&:nth-child(-n+1)]:border-t-0">
+            <li key={p.userId} className="border-t border-line/60 first:border-t-0">
               <button
                 type="button"
-                onClick={() => document.getElementById(`card-${p.userId}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                onClick={() => onOpen(p.userId)}
                 className="grid w-full grid-cols-[1fr_88px_44px] items-center gap-2 rounded-md py-1.5 text-left hover:bg-raised"
-                title="Ir para o cartão"
+                title="Ver o cartão"
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <Avatar name={p.profile.display_name} color={p.profile.avatar_color} status={p.presence} size={22} />
@@ -68,8 +144,11 @@ function TeamSummary({ people, me, usageOf }: { people: PersonView[]; me: string
                       {shortName(p.profile.display_name)}
                       {p.userId === me && <span className="font-normal text-muted"> · você</span>}
                     </span>
-                    <span className="block truncate text-[10.5px] text-muted">
-                      {p.task ? `#${p.task.number} ${p.task.title}` : "sem tarefa em andamento"}
+                    <span
+                      className={`block truncate text-[10.5px] ${p.task ? "font-medium" : "text-muted"}`}
+                      style={p.task ? { color: `color-mix(in oklch, ${p.profile.avatar_color} 75%, var(--text))` } : undefined}
+                    >
+                      {p.task ? p.task.title : "sem tarefa em andamento"}
                     </span>
                   </span>
                 </span>

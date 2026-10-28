@@ -1,16 +1,16 @@
-import { AGENT_LABELS, LIMIT_STALE_MS, PRESENCE_LABELS, type AgentKind, type UsageView } from "@cooper/shared";
+import { AGENT_LABELS, LIMIT_STALE_MS, PRESENCE_LABELS, type UsageView } from "@cooper/shared";
 import { useState } from "react";
 import { friendlyError } from "../lib/errors";
 import { shortSha, timeAgo } from "../lib/format";
 import { shortName } from "../lib/names";
 import type { PersonView } from "../lib/people";
-import { Avatar, Icon, SourceBadge } from "./ui";
+import { Avatar, Icon } from "./ui";
 import { useFlash } from "../lib/motion";
 
 /**
  * Cartão de uma pessoa na aba Agora. Ordem de leitura:
- * 1. quem é e quando foi visto; 2. em que está trabalhando; 3. quanto de limite de IA ainda tem; 4. detalhes (git).
- * Estados sem informação útil (presença desconhecida, sem git) não ocupam linha.
+ * 1. quem é; 2. em que está trabalhando (na cor da pessoa); 3. limites, uma linha por agente; 4. branch.
+ * Detalhes secundários (tokens, reinício, hora da leitura, sha) ficam no título, para o cartão não pesar.
  */
 export function TeamCard({
   p,
@@ -30,96 +30,60 @@ export function TeamCard({
   // brilho rápido quando muda o que a pessoa está fazendo ou o limite dela
   const flash = useFlash(`${p.task?.id ?? ""}|${s?.activity_text ?? ""}|${usage.map((u) => Math.round(u.primary?.pct ?? -1)).join(",")}`);
   const snap = p.snapshot;
-  // Etiquetas só de agentes em uso: sessão aberta com atividade nas últimas 12 h, ou uso hoje.
-  // (Antes a sessão mais recente valia para sempre, e um agente abandonado nunca saía do cartão.)
-  const recent = (x: { ended_at: string | null; last_event_at: string | null }) =>
-    !x.ended_at && !!x.last_event_at && now.getTime() - new Date(x.last_event_at).getTime() < 12 * 3_600_000;
-  const agents = [
-    ...new Set<AgentKind>([
-      ...(s && recent(s) ? [s.agent_kind] : []),
-      ...p.otherSessions.filter((o) => recent(o.session)).map((o) => o.session.agent_kind),
-      ...usage.map((u) => u.agent),
-    ]),
-  ];
-  const showPresence = p.presence === "running" || p.presence === "online";
-  const peak = peakLimit(usage);
+  // a tarefa leva a cor da pessoa, um pouco misturada ao texto para continuar legível nos dois temas
+  const personColor = `color-mix(in oklch, ${p.profile.avatar_color} 75%, var(--text))`;
 
   return (
     <article id={`card-${p.userId}`} className={`anim-in scroll-mt-2 rounded-xl border border-line bg-panel p-3 ${flash}`}>
-      <header className="flex items-center gap-2.5">
-        <Avatar name={p.profile.display_name} color={p.profile.avatar_color} status={p.presence} size={30} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-1.5">
-            <span className="truncate text-[13px] font-semibold">{shortName(p.profile.display_name)}</span>
-            {isMe && <span className="shrink-0 text-[10.5px] text-muted">você</span>}
-            <span className="ml-auto shrink-0 text-[10.5px] text-muted" title={p.lastSeenAt ? new Date(p.lastSeenAt).toLocaleString("pt-BR") : undefined}>
-              {p.lastSeenAt ? timeAgo(p.lastSeenAt, now) : ""}
-            </span>
-            {peak && (
-              <span
-                className={`shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-semibold tabular-nums ${PEAK_CHIP[tone(peak.pct)]}`}
-                title={`Limite mais apertado: ${peak.pct}% do limite de ${peak.label} usado`}
-              >
-                {peak.label} {Math.round(peak.pct)}%
-              </span>
-            )}
-          </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-1">
-            {showPresence && (
-              <span className={`text-[10.5px] font-medium ${p.presence === "running" ? "text-run" : "text-muted"}`}>{PRESENCE_LABELS[p.presence]}</span>
-            )}
-            {agents.map((a) => (
-              <span key={a} className="rounded-full bg-raised px-1.5 py-px text-[10px] text-muted">
-                {AGENT_LABELS[a]}
-              </span>
-            ))}
-            {agents.length === 0 && <span className="text-[10.5px] text-muted">sem agente conectado</span>}
-          </div>
-        </div>
+      <header className="flex items-center gap-2">
+        <Avatar name={p.profile.display_name} color={p.profile.avatar_color} status={p.presence} size={26} />
+        <span className="truncate text-[13px] font-semibold">{shortName(p.profile.display_name)}</span>
+        {isMe && <span className="shrink-0 text-[10.5px] text-muted">você</span>}
+        <span
+          className="ml-auto shrink-0 text-[10.5px] text-muted"
+          title={`${PRESENCE_LABELS[p.presence]}${p.lastSeenAt ? ` · visto em ${new Date(p.lastSeenAt).toLocaleString("pt-BR")}` : ""}`}
+        >
+          {p.presence === "running" ? <span className="font-medium text-run">executando</span> : p.lastSeenAt ? timeAgo(p.lastSeenAt, now) : ""}
+        </span>
       </header>
 
-      {/* 2. trabalho atual */}
-      <section className="mt-2.5">
+      {/* trabalho atual: o que mais importa, em destaque e na cor da pessoa */}
+      <section className="mt-2">
         {p.task ? (
           <>
-            <div className="flex items-baseline gap-1.5">
-              <span className="min-w-0 flex-1 truncate font-medium">{p.task.title}</span>
-              <span className="shrink-0 text-[10.5px] text-muted">#{p.task.number}</span>
-            </div>
+            <p className="truncate text-[13px] font-semibold" style={{ color: personColor }} title={`#${p.task.number} ${p.task.title}`}>
+              {p.task.title}
+            </p>
             {s?.activity_text && (
-              <div className="mt-0.5 flex items-baseline gap-1.5">
-                <span className="min-w-0 flex-1 truncate text-muted">{s.activity_text}</span>
-                <SourceBadge source="agent_declared" />
-              </div>
+              <p className="mt-0.5 truncate text-[11.5px] text-muted" title={`${s.activity_text} (declarado pelo agente)`}>
+                {s.activity_text}
+              </p>
             )}
           </>
         ) : (
-          <p className="text-muted">Sem tarefa em andamento</p>
+          <p className="text-[11.5px] text-muted">Sem tarefa em andamento</p>
         )}
       </section>
 
-      {/* 3. uso e limites */}
+      {/* limites: uma linha por agente */}
       {(usage.length > 0 || onRefreshClaude) && (
-        <section className="mt-2.5 space-y-2 border-t border-line pt-2.5">
+        <section className="mt-2.5 space-y-1.5 border-t border-line pt-2">
           {usage.map((u) => (
             <AgentUsage key={u.agent} u={u} now={now} isMe={isMe} onRefresh={u.agent === "claude_code" ? onRefreshClaude : undefined} />
           ))}
-          {!usage.some((u) => u.agent === "claude_code") && onRefreshClaude && (
-            <AgentUsage u={null} now={now} isMe onRefresh={onRefreshClaude} />
-          )}
+          {!usage.some((u) => u.agent === "claude_code") && onRefreshClaude && <AgentUsage u={null} now={now} isMe onRefresh={onRefreshClaude} />}
         </section>
       )}
       {usage.length === 0 && !onRefreshClaude && (
         <p className="mt-2 text-[10.5px] text-muted">{isMe ? "Uso de IA: só no app desktop" : "Uso de IA não compartilhado"}</p>
       )}
 
-      {/* 4. detalhes */}
+      {/* git: uma linha discreta */}
       {snap && (
-        <footer className="mt-2.5 flex items-center gap-1.5 border-t border-line pt-2 text-[10.5px] text-muted">
+        <footer className="mt-2 flex items-center gap-1.5 text-[10.5px] text-muted">
           <Icon name="branch" size={11} />
-          <span className="min-w-0 flex-1 truncate" title={snap.branch ?? undefined}>
+          <span className="min-w-0 flex-1 truncate" title={`git local${snap.head_sha ? ` · ${shortSha(snap.head_sha)}` : ""}`}>
             {snap.branch ?? "HEAD destacado"}
-            {snap.head_sha && <> · {shortSha(snap.head_sha)}</>}
           </span>
           {snap.dirty_files_count > 0 && (
             <span className="shrink-0">
@@ -127,7 +91,6 @@ export function TeamCard({
             </span>
           )}
           {snap.behind ? <span className="shrink-0 text-warn">{snap.behind} atrás</span> : null}
-          <SourceBadge source="local_git" />
         </footer>
       )}
     </article>
@@ -154,7 +117,6 @@ function resetLabel(at: Date, now: Date): string {
 export const tone = (pct: number) => (pct >= 90 ? "danger" : pct >= 70 ? "warn" : "ok");
 export const BAR = { ok: "bg-muted", warn: "bg-warn", danger: "bg-danger" } as const;
 export const TEXT = { ok: "text-text", warn: "text-warn", danger: "text-danger" } as const;
-const PEAK_CHIP = { ok: "bg-raised text-muted", warn: "bg-warn/15 text-warn", danger: "bg-danger/15 text-danger" } as const;
 
 /** Limite mais apertado da pessoa entre os agentes (o de 5 h acaba primeiro; sem ele, o da semana). */
 export function peakLimit(usage: UsageView[]): { pct: number; label: "5 h" | "semana" } | null {
@@ -164,81 +126,77 @@ export function peakLimit(usage: UsageView[]): { pct: number; label: "5 h" | "se
   return week.length ? { pct: Math.max(...week), label: "semana" } : null;
 }
 
-/** Um agente: nome e tokens do dia; limites de 5 h e da semana como medidores; quando foram lidos. */
+/** Um agente numa linha: nome, 5 h e semana. Tokens, reinício e hora da leitura ficam no título. */
 function AgentUsage({ u, now, isMe, onRefresh }: { u: UsageView | null; now: Date; isMe: boolean; onRefresh?: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const at = u?.limitsObservedAt ?? null;
   const stale = !!at && now.getTime() - at.getTime() > LIMIT_STALE_MS;
   const hasLimits = !!(u?.primary || u?.secondary);
+  const info = [
+    u && `${compact.format(u.totalTokens)} tokens hoje (entrada ${full.format(u.tokens.input)} · saída ${full.format(u.tokens.output)})`,
+    at && `limites lidos ${timeAgo(at.toISOString(), now)}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return (
     <div>
-      <div className="flex items-baseline gap-1.5">
-        <span className="shrink-0 font-medium">{AGENT_LABELS[u?.agent ?? "claude_code"]}</span>
-        {u && (
-          <span
-            className="min-w-0 truncate text-[10.5px] text-muted"
-            title={`entrada ${full.format(u.tokens.input)} · saída ${full.format(u.tokens.output)} · cache lido ${full.format(u.tokens.cache_read)} · cache gravado ${full.format(u.tokens.cache_write)}${u.models.length ? `\n${u.models.join(", ")}` : ""}`}
-          >
-            · {compact.format(u.totalTokens)} tokens hoje
+      <div className="flex items-center gap-2 text-[11px]">
+        <span className="w-[4.6rem] shrink-0 truncate text-muted" title={info || undefined}>
+          {AGENT_LABELS[u?.agent ?? "claude_code"]}
+        </span>
+        {hasLimits ? (
+          <div className={`grid min-w-0 flex-1 grid-cols-2 gap-2.5 ${stale ? "opacity-60" : ""}`}>
+            {u!.primary ? <Meter label="5 h" pct={u!.primary.pct} reset={resetLabel(u!.primary.resetsAt, now)} /> : <span />}
+            {u!.secondary ? <Meter label="sem" pct={u!.secondary.pct} reset={resetLabel(u!.secondary.resetsAt, now)} /> : <span />}
+          </div>
+        ) : (
+          <span className="flex-1 text-[10.5px] text-muted">{u ? "limite não informado" : "limite ainda não lido"}</span>
+        )}
+        {stale && (
+          <span className="shrink-0 text-warn" title={`Limites lidos ${timeAgo(at!.toISOString(), now)}: podem estar desatualizados`}>
+            ⚠
           </span>
         )}
-        {at && (
-          <span className={`ml-auto shrink-0 text-[10px] ${stale ? "font-medium text-warn" : "text-muted"}`} title={`Limites lidos em ${at.toLocaleString("pt-BR")}`}>
-            {stale && "⚠ "}lido {timeAgo(at.toISOString(), now)}
-          </span>
+        {onRefresh && isMe && (
+          <button
+            type="button"
+            disabled={busy}
+            aria-label="Atualizar limites do Claude Code"
+            onClick={() => {
+              setBusy(true);
+              setErr(null);
+              onRefresh()
+                .catch((e) => setErr(friendlyError(e)))
+                .finally(() => setBusy(false));
+            }}
+            className={`shrink-0 rounded px-1 text-muted hover:bg-raised hover:text-text disabled:opacity-50 ${busy ? "animate-spin" : ""}`}
+            title="Roda o Claude Code em segundo plano (uma mensagem curta no Haiku) para ler os limites"
+          >
+            ↻
+          </button>
         )}
       </div>
-
-      {hasLimits ? (
-        <div className={`mt-1.5 grid grid-cols-2 gap-3 ${stale ? "opacity-60" : ""}`}>
-          {u!.primary && <Meter label="5 horas" pct={u!.primary.pct} reset={resetLabel(u!.primary.resetsAt, now)} />}
-          {u!.secondary && <Meter label="Semana" pct={u!.secondary.pct} reset={resetLabel(u!.secondary.resetsAt, now)} />}
-        </div>
-      ) : (
-        <p className="mt-0.5 text-[10.5px] text-muted">{u ? "limite não informado" : "limite ainda não lido"}</p>
+      {err && (
+        <p className="mt-0.5 truncate text-[10px] text-danger" title={err}>
+          {err}
+        </p>
       )}
-
-      {onRefresh && isMe && (
-        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted">
-          {(
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                setBusy(true);
-                setErr(null);
-                onRefresh()
-                  .catch((e) => setErr(friendlyError(e)))
-                  .finally(() => setBusy(false));
-              }}
-              className="ml-auto rounded px-1 text-accent hover:bg-raised disabled:opacity-50"
-              title="Roda o Claude Code em segundo plano (uma mensagem curta no Haiku) para ler os limites"
-            >
-              {busy ? "lendo…" : "↻ atualizar"}
-            </button>
-          )}
-        </div>
-      )}
-      {err && <p className="mt-0.5 truncate text-[10px] text-danger" title={err}>{err}</p>}
     </div>
   );
 }
 
-/** Medidor de um limite: rótulo e percentual em cima, barra, e quando reinicia. */
+/** Medidor compacto: rótulo, barra e percentual; quando reinicia fica no título. */
 function Meter({ label, pct, reset }: { label: string; pct: number; reset: string }) {
   const t = tone(pct);
   return (
-    <div className="min-w-0" title={`${label}: ${pct}% do limite usado; reinicia ${reset}`}>
-      <div className="flex items-baseline justify-between">
-        <span className="text-[10.5px] text-muted">{label}</span>
-        <span className={`text-[13px] leading-none font-semibold tabular-nums ${TEXT[t]}`}>{Math.round(pct)}%</span>
-      </div>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-raised" role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`limite ${label}`}>
+    <div className="flex min-w-0 items-center gap-1.5" title={`${label === "sem" ? "Semana" : "5 horas"}: ${Math.round(pct)}% do limite usado; reinicia ${reset}`}>
+      <span className="shrink-0 text-[10px] text-muted">{label}</span>
+      <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-raised" role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`limite ${label}`}>
         <div className={`h-full rounded-full transition-[width] duration-700 ease-out ${BAR[t]}`} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} />
       </div>
-      <div className="mt-1 truncate text-[10px] leading-none text-muted">reinicia {reset}</div>
+      <span className={`w-7 shrink-0 text-right font-semibold tabular-nums ${TEXT[t]}`}>{Math.round(pct)}%</span>
     </div>
   );
 }
