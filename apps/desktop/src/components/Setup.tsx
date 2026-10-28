@@ -1,6 +1,7 @@
 import installSql from "../../../../supabase/install.sql?raw";
 import { useState } from "react";
 import { checkServer, decodeConnectionCode, saveServerConfig, validAnonKey, validServerUrl, type ServerConfig } from "../lib/config";
+import { BrandHeader } from "./ui";
 
 const INPUT = "w-full rounded-md border border-line bg-raised px-2 py-1.5 outline-none focus:border-accent";
 
@@ -13,8 +14,9 @@ export function Setup() {
 
   return (
     <div className="flex h-full flex-col overflow-y-auto p-5">
-      <h1 className="text-[15px] font-semibold">Bem-vindo ao Cooper</h1>
-      <p className="mt-0.5 mb-4 text-muted">Primeiro, escolha o servidor do seu time. Ele guarda tarefas, contexto e quem está fazendo o quê.</p>
+      <BrandHeader compact />
+      <h1 className="mt-5 text-[14px] font-semibold">Bem-vindo</h1>
+      <p className="mt-0.5 mb-4 text-[11px] leading-snug text-muted">Primeiro, escolha o servidor do seu time. Ele guarda tarefas, contexto e quem está fazendo o quê.</p>
 
       {mode === "choose" && (
         <div className="space-y-2">

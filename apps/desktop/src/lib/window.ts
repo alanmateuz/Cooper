@@ -73,7 +73,7 @@ export function resizeFromMouseDown(e: ReactMouseEvent) {
  */
 export function dragFromMouseDown(e: ReactMouseEvent) {
   if (!inTauri || e.button !== 0 || e.detail > 1) return;
-  if ((e.target as HTMLElement).closest("button, input, select, textarea, a")) return;
+  if ((e.target as HTMLElement).closest("button, input, select, textarea, a, label")) return;
   void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow().startDragging());
 }
 

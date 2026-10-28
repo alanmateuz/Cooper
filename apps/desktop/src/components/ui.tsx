@@ -124,6 +124,17 @@ export function LogoMark({ height = 14, bg = "var(--bg)" }: { height?: number; b
   );
 }
 
+/** Marca nas telas de entrada (login e configuração): símbolo, nome e uma frase do que o Cooper faz. */
+export function BrandHeader({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={`flex flex-col items-center text-center ${compact ? "gap-1" : "gap-2"}`}>
+      <LogoMark height={compact ? 28 : 40} />
+      <div className={`${compact ? "text-[15px]" : "text-[18px]"} leading-none font-semibold tracking-tight`}>Cooper</div>
+      {!compact && <p className="max-w-[240px] text-[11px] leading-snug text-muted">Tarefas, contexto e limites de IA do seu time, num só lugar.</p>}
+    </div>
+  );
+}
+
 /**
  * Confirmação na própria tela (no lugar do confirm() nativo): faixa com o texto e dois botões.
  * `children`: conteúdo extra (ex.: campo para digitar o nome do projeto).
