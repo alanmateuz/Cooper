@@ -1,4 +1,4 @@
-import { localDay, viewsFromReport, viewsFromRows } from "@cooper/shared";
+import { localDay, viewsFromReport, viewsFromRows, type AgentKind } from "@cooper/shared";
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useMemo, useState } from "react";
 import { pref, setPref } from "../lib/format";
@@ -6,12 +6,13 @@ import { buildNotifications, useNotificationState } from "../lib/notifications";
 import { buildPeople } from "../lib/people";
 import { playChime } from "../lib/sound";
 import { claudeAutoRefreshPref, CLAUDE_AUTO_REFRESH_PREF, refreshClaudeLimits, useClaudeAutoRefresh, useLocalUsage, useShareUsage } from "../lib/usage";
+import { supabase } from "../lib/supabase";
 import { useWorkspace } from "../lib/useWorkspace";
-import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, type WidgetMode } from "../lib/window";
+import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, resizeFromMouseDown, type WidgetMode } from "../lib/window";
 import { ContextTab } from "./ContextTab";
 import { BellButton, NotificationsPanel } from "./Notifications";
 import { ActivityTab } from "./ActivityTab";
-import { CoordinationSection, Empty, NotificationSettings, PrivacySection, SettingsSection, SettingsTab } from "./OtherTabs";
+import { AgentVisibility, CoordinationSection, Empty, NotificationSettings, PrivacySection, SettingsSection, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
 import { ClaudeStatusLine } from "./ClaudeStatusLine";
 import { CreateWorkspace, MembersSection, Onboarding, PendingInvites, ProjectSection } from "./Team";
@@ -70,7 +71,20 @@ export function Widget({
   const me = session.user.id;
   const myMember = data.members.find((m) => m.user_id === me);
   const sharing = myMember?.share_usage ?? false;
-  const { report: localUsage, reload: reloadUsage } = useLocalUsage();
+  const { report: rawUsage, reload: reloadUsage } = useLocalUsage();
+  // Agentes que a pessoa tirou do cartão (⚙ → Uso de IA): o uso deles não é lido para mostrar nem enviado.
+  const [hiddenAgents, setHiddenAgentsState] = useState<AgentKind[]>(() => pref<AgentKind[]>("hiddenAgents", []));
+  const localUsage = useMemo(
+    () => (rawUsage ? { claude_code: hiddenAgents.includes("claude_code") ? null : rawUsage.claude_code, codex: hiddenAgents.includes("codex") ? null : rawUsage.codex } : null),
+    [rawUsage, hiddenAgents],
+  );
+  const setAgentHidden = (agent: AgentKind, hide: boolean) => {
+    const next = hide ? [...new Set([...hiddenAgents, agent])] : hiddenAgents.filter((a) => a !== agent);
+    setHiddenAgentsState(next);
+    setPref("hiddenAgents", next);
+    // o que já tinha sido compartilhado desse agente some para o time
+    if (hide && data.workspace) void supabase.from("ai_usage").delete().eq("workspace_id", data.workspace.id).eq("user_id", me).eq("agent_kind", agent);
+  };
   const shareStatus = useShareUsage(localUsage, data.workspace?.id ?? null, me, sharing);
   const [autoRefresh, setAutoRefreshState] = useState(claudeAutoRefreshPref);
   const setAutoRefresh = (v: boolean) => {
@@ -122,7 +136,7 @@ export function Widget({
   const showTab: Tab = mode === "compact" ? "now" : tab;
 
   return (
-    <div className={`flex h-full flex-col overflow-hidden rounded-xl border border-line bg-bg shadow-2xl transition-opacity ${dim ? "opacity-60 hover:opacity-100" : ""}`}>
+    <div className={`relative flex h-full flex-col overflow-hidden rounded-xl border border-line bg-bg shadow-2xl transition-opacity ${dim ? "opacity-60 hover:opacity-100" : ""}`}>
       <header onMouseDown={dragFromMouseDown} className="flex h-9 shrink-0 cursor-default items-center gap-1.5 border-b border-line px-2.5">
         <LogoMark height={13} />
         <span className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -158,7 +172,8 @@ export function Widget({
         {status === "ready" && data.workspace && (
           <>
             {showTab === "now" && (
-              <div className="h-full space-y-2 overflow-y-auto p-2.5">
+              /* grade: com a janela mais larga, os cartões viram colunas; mais alta, cabem mais linhas */
+              <div className="grid h-full auto-rows-min grid-cols-[repeat(auto-fill,minmax(300px,1fr))] content-start gap-2 overflow-y-auto p-2.5">
                 {/* alertas de conflito entram aqui (Fase 4); tarefas novas e avisos ficam no sino */}
                 {people.map((p) => (
                   <TeamCard key={p.userId} p={p} now={now} isMe={p.userId === me} usage={usageOf(p.userId)} onRefreshClaude={p.userId === me ? refreshClaude : undefined} />
@@ -210,6 +225,7 @@ export function Widget({
                 </SettingsSection>
                 <SettingsSection title="Uso de IA">
                   <PrivacySection workspaceId={data.workspace.id} sharing={sharing} status={shareStatus} />
+                  <AgentVisibility hidden={hiddenAgents} onChange={setAgentHidden} />
                   <ClaudeStatusLine autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh} />
                 </SettingsSection>
               </SettingsTab>
@@ -252,6 +268,18 @@ export function Widget({
             </button>
           ))}
         </nav>
+      )}
+      {inTauri && (
+        <div
+          onMouseDown={resizeFromMouseDown}
+          title="Arraste para redimensionar"
+          aria-hidden
+          className="absolute right-0 bottom-0 h-4 w-4 cursor-se-resize text-muted/60 hover:text-muted"
+        >
+          <svg viewBox="0 0 16 16" className="h-full w-full" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round">
+            <path d="M14 8 8 14M14 11.5 11.5 14" />
+          </svg>
+        </div>
       )}
     </div>
   );

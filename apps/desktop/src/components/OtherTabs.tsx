@@ -1,4 +1,4 @@
-import type { Workspace } from "@cooper/shared";
+import { AGENT_LABELS, type AgentKind, type Workspace } from "@cooper/shared";
 import { useState } from "react";
 import { friendlyError } from "../lib/errors";
 import { setMemberOption, setUsageSharing } from "../lib/api";
@@ -274,6 +274,22 @@ export function CoordinationSection({ workspaceId, coordinator, autoAccept }: { 
         <Toggle checked={autoAccept} disabled={busy} onChange={(v) => void toggle("auto_accept", v)} label="Aceitar tarefas automaticamente" />
       </div>
       {err && <p className="text-[10.5px] text-danger">{err}</p>}
+    </section>
+  );
+}
+
+/** ⚙ → Uso de IA: quais agentes aparecem no meu cartão (por máquina). Esconder também para de enviar o uso dele. */
+export function AgentVisibility({ hidden, onChange }: { hidden: AgentKind[]; onChange: (agent: AgentKind, hide: boolean) => void }) {
+  return (
+    <section className="space-y-1.5">
+      <div className="font-medium">Agentes no meu cartão</div>
+      <p className="text-[10.5px] leading-snug text-muted">Desligue um agente que você não usa mais: o Cooper para de ler o uso dele e apaga o que já tinha sido compartilhado.</p>
+      {(["claude_code", "codex"] as const).map((a) => (
+        <div key={a} className="flex items-center justify-between gap-3">
+          <span>{AGENT_LABELS[a]}</span>
+          <Toggle checked={!hidden.includes(a)} onChange={(v) => onChange(a, !v)} label={`Mostrar ${AGENT_LABELS[a]} no meu cartão`} />
+        </div>
+      ))}
     </section>
   );
 }

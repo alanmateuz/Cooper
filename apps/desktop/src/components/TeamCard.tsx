@@ -27,7 +27,17 @@ export function TeamCard({
 }) {
   const s = p.session;
   const snap = p.snapshot;
-  const agents = [...new Set<AgentKind>([...(s ? [s.agent_kind] : []), ...p.otherSessions.map((o) => o.session.agent_kind), ...usage.map((u) => u.agent)])];
+  // Etiquetas só de agentes em uso: sessão aberta com atividade nas últimas 12 h, ou uso hoje.
+  // (Antes a sessão mais recente valia para sempre, e um agente abandonado nunca saía do cartão.)
+  const recent = (x: { ended_at: string | null; last_event_at: string | null }) =>
+    !x.ended_at && !!x.last_event_at && now.getTime() - new Date(x.last_event_at).getTime() < 12 * 3_600_000;
+  const agents = [
+    ...new Set<AgentKind>([
+      ...(s && recent(s) ? [s.agent_kind] : []),
+      ...p.otherSessions.filter((o) => recent(o.session)).map((o) => o.session.agent_kind),
+      ...usage.map((u) => u.agent),
+    ]),
+  ];
   const showPresence = p.presence === "running" || p.presence === "online";
 
   return (

@@ -1,11 +1,11 @@
 import type { Session } from "@supabase/supabase-js";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Login } from "./components/Login";
 import { Setup } from "./components/Setup";
 import { Widget } from "./components/Widget";
 import { pref, setPref } from "./lib/format";
 import { isConfigured, supabase } from "./lib/supabase";
-import { applyWindowMode, dragFromMouseDown, inTauri, WINDOW_SIZES, type WidgetMode } from "./lib/window";
+import { applyWindowMode, dragFromMouseDown, inTauri, panelSize, savePanelSize, watchPanelSize, WINDOW_SIZES, type WidgetMode } from "./lib/window";
 
 export function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
@@ -27,6 +27,15 @@ export function App() {
   useEffect(() => {
     void applyWindowMode(effectiveMode);
   }, [effectiveMode]);
+
+  // Guarda o tamanho do painel quando a pessoa redimensiona a janela (a pílula não conta).
+  const modeRef = useRef(effectiveMode);
+  modeRef.current = effectiveMode;
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    void watchPanelSize(() => modeRef.current !== "pill").then((u) => (stop = u));
+    return () => stop?.();
+  }, []);
 
   const setMode = (m: WidgetMode) => {
     setModeState(m);
@@ -52,11 +61,17 @@ export function App() {
 
   if (inTauri) return content;
 
-  // No navegador: simula a janela com o tamanho exato de cada modo.
-  const size = WINDOW_SIZES[effectiveMode];
+  // No navegador: simula a janela. O painel pode ser redimensionado pelo canto (como no app).
+  const size = effectiveMode === "pill" ? WINDOW_SIZES.pill : panelSize();
   return (
     <div className="flex h-full items-center justify-center bg-[#2a2d35] light:bg-[#c9ccd3]">
-      <div style={{ width: size.width, height: size.height }} data-mode={effectiveMode}>
+      <div
+        key={effectiveMode}
+        style={{ width: size.width, height: size.height, minWidth: effectiveMode === "pill" ? undefined : 320, minHeight: effectiveMode === "pill" ? undefined : 360 }}
+        className={effectiveMode === "pill" ? "" : "resize overflow-hidden"}
+        data-mode={effectiveMode}
+        onMouseUp={(e) => effectiveMode !== "pill" && savePanelSize(e.currentTarget.getBoundingClientRect())}
+      >
         {content}
       </div>
     </div>
