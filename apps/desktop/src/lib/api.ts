@@ -119,6 +119,12 @@ export async function revokeOtherConnections(workspaceId: string, me: string, ki
   return done(error);
 }
 
+/** ⚙ → IA e tarefas: modo coordenador da minha IA e aceite automático do que chega para mim. */
+export async function setMemberOption(workspaceId: string, option: "ai_coordinator" | "auto_accept", on: boolean): Result {
+  const { error } = await supabase.rpc("set_member_option", { p_workspace: workspaceId, p_option: option, p_on: on });
+  return done(error);
+}
+
 export async function setUsageSharing(workspaceId: string, on: boolean): Result {
   const { error } = await supabase.rpc("set_usage_sharing", { p_workspace: workspaceId, p_on: on });
   return done(error);

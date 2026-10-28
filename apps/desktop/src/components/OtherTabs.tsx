@@ -1,7 +1,7 @@
 import type { Workspace } from "@cooper/shared";
 import { useState } from "react";
 import { friendlyError } from "../lib/errors";
-import { setUsageSharing } from "../lib/api";
+import { setMemberOption, setUsageSharing } from "../lib/api";
 import { clearServerConfig, serverHost } from "../lib/config";
 import { serverConfig, supabase } from "../lib/supabase";
 import { CRITICAL_USAGE_PCT } from "../lib/notifications";
@@ -237,6 +237,43 @@ export function PrivacySection({ workspaceId, sharing, status }: { workspaceId: 
               : `Último envio às ${hhmm(status.at)}.`}
         </p>
       )}
+    </section>
+  );
+}
+
+/** ⚙ → IA e tarefas. Duas chaves desta pessoa, neste projeto. As mudanças chegam pelo Realtime (workspace_members). */
+export function CoordinationSection({ workspaceId, coordinator, autoAccept }: { workspaceId: string; coordinator: boolean; autoAccept: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  async function toggle(option: "ai_coordinator" | "auto_accept", on: boolean) {
+    setBusy(true);
+    setErr(null);
+    const error = await setMemberOption(workspaceId, option, on);
+    setBusy(false);
+    if (error) setErr(error);
+  }
+  return (
+    <section className="space-y-2">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="font-medium">Modo coordenador da minha IA</div>
+          <p className="text-[10.5px] leading-snug text-muted">
+            Sua IA vê as tarefas e o uso de IA do time (só de quem compartilha), divide e redistribui tarefas, edita título e prompt, e inicia ou
+            conclui qualquer tarefa. Quem recebe ainda aceita, a menos que tenha ligado o aceite automático.
+          </p>
+        </div>
+        <Toggle checked={coordinator} disabled={busy} onChange={(v) => void toggle("ai_coordinator", v)} label="Modo coordenador da minha IA" />
+      </div>
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="font-medium">Aceitar tarefas automaticamente</div>
+          <p className="text-[10.5px] leading-snug text-muted">
+            Tarefas que mandarem para você (pessoas ou IAs) entram direto na sua fila, sem "aguardando aceite". Vale também quando o prompt muda.
+          </p>
+        </div>
+        <Toggle checked={autoAccept} disabled={busy} onChange={(v) => void toggle("auto_accept", v)} label="Aceitar tarefas automaticamente" />
+      </div>
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
     </section>
   );
 }

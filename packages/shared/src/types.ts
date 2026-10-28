@@ -24,6 +24,10 @@ export interface WorkspaceMember {
   joined_at: string;
   /** Compartilha o uso de IA com o time (⚙ → Privacidade). Desligado por padrão. */
   share_usage: boolean;
+  /** A IA desta pessoa coordena o time (⚙ → IA e tarefas). Desligado por padrão. */
+  ai_coordinator: boolean;
+  /** Tarefas enviadas a esta pessoa entram aceitas. Desligado por padrão. */
+  auto_accept: boolean;
 }
 
 export interface Task {

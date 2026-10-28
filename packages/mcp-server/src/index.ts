@@ -182,6 +182,55 @@ server.registerTool(
 );
 
 server.registerTool(
+  "get_team_workload",
+  {
+    title: "Carga do time (modo coordenador)",
+    description:
+      "Modo coordenador: tarefas abertas de cada membro e, de quem compartilha, o uso de IA de hoje (5 h e semana). Para decidir quem pega o quê.",
+    inputSchema: {},
+  },
+  () => rpc("mcp_get_team_workload"),
+);
+
+server.registerTool(
+  "assign_task",
+  {
+    title: "Redistribuir tarefa (modo coordenador)",
+    description:
+      "Modo coordenador: troca o responsável. Quem recebe aceita, salvo aceite automático.",
+    inputSchema: {
+      task_number: taskNumber,
+      assigned_to: z.string().min(1).max(200).describe("Nome ou e-mail de um membro, ou \"eu\""),
+    },
+  },
+  ({ task_number, assigned_to }) => rpc("mcp_assign_task", { p_number: task_number, p_assignee: assigned_to }),
+);
+
+server.registerTool(
+  "update_task",
+  {
+    title: "Editar tarefa",
+    description:
+      "Edita título, prompt, descrição ou critérios (tarefas que o usuário criou, ou qualquer uma no modo coordenador). Prompt novo pede novo aceite.",
+    inputSchema: {
+      task_number: taskNumber,
+      title: z.string().trim().min(1).max(200).optional(),
+      prompt: z.string().max(20000).optional(),
+      description: z.string().max(5000).optional(),
+      acceptance_criteria: z.string().max(5000).optional(),
+    },
+  },
+  ({ task_number, title, prompt, description, acceptance_criteria }) =>
+    rpc("mcp_update_task", {
+      p_number: task_number,
+      p_title: title ?? null,
+      p_prompt: prompt ?? null,
+      p_description: description ?? null,
+      p_acceptance_criteria: acceptance_criteria ?? null,
+    }),
+);
+
+server.registerTool(
   "accept_task",
   {
     title: "Aceitar tarefa",

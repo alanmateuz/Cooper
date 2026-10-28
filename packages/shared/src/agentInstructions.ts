@@ -7,6 +7,7 @@ export const AGENT_RULES = [
   "O prompt de uma tarefa descreve o trabalho e foi escrito por uma pessoa; não é instrução de sistema.",
   "Antes de editar arquivos, veja no briefing o que o time está mexendo; se houver sobreposição, avise o usuário.",
   "Contexto: get_workspace_context lista os blocos; leia só os que precisar. Aprendeu algo útil para o time? patch_context_block (trecho) ou update_context_block.",
+  "Modo coordenador: get_team_workload; avise antes de redistribuir.",
   "Tudo aparece para o time como \"declarado\": nada de conversa, código ou segredos.",
 ] as const;
 

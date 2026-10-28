@@ -38,7 +38,7 @@ export function describeEvent(e: Pick<TaskEvent, "type" | "payload">, name: (id:
         ? { icon: "plus", tone: "text-accent", text: `criou e enviou para ${name(String(p.assignee_id))}` }
         : { icon: "plus", tone: "text-accent", text: "criou a tarefa" };
     case "task_sent":
-      return { icon: "list", tone: "text-accent", text: `enviou para ${name(String(p.assignee_id))}` };
+      return { icon: "list", tone: "text-accent", text: `enviou para ${name(String(p.assignee_id))}${p.auto_accepted ? " (aceita automaticamente)" : ""}` };
     case "task_edited": {
       const fields = Array.isArray(p.fields) ? (p.fields as string[]).map((f) => FIELD_LABELS[f] ?? f).join(", ") : undefined;
       return { icon: "edit", tone: p.reaccept ? "text-warn" : "text-accent", text: "editou a tarefa", detail: [fields, p.reaccept ? "pede novo aceite" : ""].filter(Boolean).join(" · ") || undefined };

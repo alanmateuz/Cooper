@@ -35,6 +35,7 @@ export const taskEventPayloadSchema = z
     assignee_id: z.string().uuid().optional(),
     reason: z.string().max(500).optional(),
     summary: z.string().max(1000).optional(),
+    auto_accepted: z.boolean().optional(),
     /** task_edited: campos alterados e se a mudança pediu novo aceite */
     fields: z.array(z.enum(["title", "prompt", "description", "acceptance_criteria"])).max(4).optional(),
     reaccept: z.boolean().optional(),

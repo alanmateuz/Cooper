@@ -11,7 +11,7 @@ import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, type WidgetMode } 
 import { ContextTab } from "./ContextTab";
 import { BellButton, NotificationsPanel } from "./Notifications";
 import { ActivityTab } from "./ActivityTab";
-import { Empty, NotificationSettings, PrivacySection, SettingsSection, SettingsTab } from "./OtherTabs";
+import { CoordinationSection, Empty, NotificationSettings, PrivacySection, SettingsSection, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
 import { ClaudeStatusLine } from "./ClaudeStatusLine";
 import { CreateWorkspace, MembersSection, Onboarding, PendingInvites, ProjectSection } from "./Team";
@@ -68,7 +68,8 @@ export function Widget({
   const people = useMemo(() => buildPeople(data, now), [data, now]);
   const alerts = 0; // regras de conflito: Fase 4
   const me = session.user.id;
-  const sharing = data.members.find((m) => m.user_id === me)?.share_usage ?? false;
+  const myMember = data.members.find((m) => m.user_id === me);
+  const sharing = myMember?.share_usage ?? false;
   const { report: localUsage, reload: reloadUsage } = useLocalUsage();
   const shareStatus = useShareUsage(localUsage, data.workspace?.id ?? null, me, sharing);
   const [autoRefresh, setAutoRefreshState] = useState(claudeAutoRefreshPref);
@@ -203,6 +204,9 @@ export function Widget({
                 </SettingsSection>
                 <SettingsSection title="Projeto">
                   <ProjectSection data={data} me={session.user.id} onChanged={(keepId) => void loadWorkspaces(keepId)} />
+                </SettingsSection>
+                <SettingsSection title="IA e tarefas">
+                  <CoordinationSection workspaceId={data.workspace.id} coordinator={myMember?.ai_coordinator ?? false} autoAccept={myMember?.auto_accept ?? false} />
                 </SettingsSection>
                 <SettingsSection title="Uso de IA">
                   <PrivacySection workspaceId={data.workspace.id} sharing={sharing} status={shareStatus} />
