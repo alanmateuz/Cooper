@@ -42,9 +42,10 @@ export function TeamCard({
     ]),
   ];
   const showPresence = p.presence === "running" || p.presence === "online";
+  const peak = peakLimit(usage);
 
   return (
-    <article className={`anim-in rounded-xl border border-line bg-panel p-3 ${flash}`}>
+    <article id={`card-${p.userId}`} className={`anim-in scroll-mt-2 rounded-xl border border-line bg-panel p-3 ${flash}`}>
       <header className="flex items-center gap-2.5">
         <Avatar name={p.profile.display_name} color={p.profile.avatar_color} status={p.presence} size={30} />
         <div className="min-w-0 flex-1">
@@ -54,6 +55,14 @@ export function TeamCard({
             <span className="ml-auto shrink-0 text-[10.5px] text-muted" title={p.lastSeenAt ? new Date(p.lastSeenAt).toLocaleString("pt-BR") : undefined}>
               {p.lastSeenAt ? timeAgo(p.lastSeenAt, now) : ""}
             </span>
+            {peak && (
+              <span
+                className={`shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-semibold tabular-nums ${PEAK_CHIP[tone(peak.pct)]}`}
+                title={`Limite mais apertado: ${peak.pct}% do limite de ${peak.label} usado`}
+              >
+                {peak.label} {Math.round(peak.pct)}%
+              </span>
+            )}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-1">
             {showPresence && (
@@ -142,9 +151,18 @@ function resetLabel(at: Date, now: Date): string {
   return `${at.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "")} ${time}`;
 }
 
-const tone = (pct: number) => (pct >= 90 ? "danger" : pct >= 70 ? "warn" : "ok");
-const BAR = { ok: "bg-accent", warn: "bg-warn", danger: "bg-danger" } as const;
-const TEXT = { ok: "text-text", warn: "text-warn", danger: "text-danger" } as const;
+export const tone = (pct: number) => (pct >= 90 ? "danger" : pct >= 70 ? "warn" : "ok");
+export const BAR = { ok: "bg-accent", warn: "bg-warn", danger: "bg-danger" } as const;
+export const TEXT = { ok: "text-text", warn: "text-warn", danger: "text-danger" } as const;
+const PEAK_CHIP = { ok: "bg-raised text-muted", warn: "bg-warn/15 text-warn", danger: "bg-danger/15 text-danger" } as const;
+
+/** Limite mais apertado da pessoa entre os agentes (o de 5 h acaba primeiro; sem ele, o da semana). */
+export function peakLimit(usage: UsageView[]): { pct: number; label: "5 h" | "semana" } | null {
+  const five = usage.map((u) => u.primary?.pct).filter((x): x is number => x != null);
+  if (five.length) return { pct: Math.max(...five), label: "5 h" };
+  const week = usage.map((u) => u.secondary?.pct).filter((x): x is number => x != null);
+  return week.length ? { pct: Math.max(...week), label: "semana" } : null;
+}
 
 /** Um agente: nome e tokens do dia; limites de 5 h e da semana como medidores; quando foram lidos. */
 function AgentUsage({ u, now, isMe, onRefresh }: { u: UsageView | null; now: Date; isMe: boolean; onRefresh?: () => Promise<void> }) {
@@ -157,13 +175,18 @@ function AgentUsage({ u, now, isMe, onRefresh }: { u: UsageView | null; now: Dat
   return (
     <div>
       <div className="flex items-baseline gap-1.5">
-        <span className="font-medium">{AGENT_LABELS[u?.agent ?? "claude_code"]}</span>
+        <span className="shrink-0 font-medium">{AGENT_LABELS[u?.agent ?? "claude_code"]}</span>
         {u && (
           <span
-            className="ml-auto text-[10.5px] text-muted"
+            className="min-w-0 truncate text-[10.5px] text-muted"
             title={`entrada ${full.format(u.tokens.input)} · saída ${full.format(u.tokens.output)} · cache lido ${full.format(u.tokens.cache_read)} · cache gravado ${full.format(u.tokens.cache_write)}${u.models.length ? `\n${u.models.join(", ")}` : ""}`}
           >
-            {compact.format(u.totalTokens)} tokens hoje
+            · {compact.format(u.totalTokens)} tokens hoje
+          </span>
+        )}
+        {at && (
+          <span className={`ml-auto shrink-0 text-[10px] ${stale ? "font-medium text-warn" : "text-muted"}`} title={`Limites lidos em ${at.toLocaleString("pt-BR")}`}>
+            {stale && "⚠ "}lido {timeAgo(at.toISOString(), now)}
           </span>
         )}
       </div>
@@ -177,14 +200,9 @@ function AgentUsage({ u, now, isMe, onRefresh }: { u: UsageView | null; now: Dat
         <p className="mt-0.5 text-[10.5px] text-muted">{u ? "limite não informado" : "limite ainda não lido"}</p>
       )}
 
-      {(at || onRefresh) && (
+      {onRefresh && isMe && (
         <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted">
-          {at && (
-            <span className={stale ? "text-warn" : ""} title={at.toLocaleString("pt-BR")}>
-              {stale && "⚠ "}lido {timeAgo(at.toISOString(), now)}
-            </span>
-          )}
-          {onRefresh && isMe && (
+          {(
             <button
               type="button"
               disabled={busy}

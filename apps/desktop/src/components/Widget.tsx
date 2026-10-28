@@ -17,7 +17,7 @@ import { Pill } from "./Pill";
 import { ClaudeStatusLine } from "./ClaudeStatusLine";
 import { CreateWorkspace, MembersSection, Onboarding, PendingInvites, ProjectSection } from "./Team";
 import { awaitingForMe, TasksTab } from "./TasksTab";
-import { TeamCard } from "./TeamCard";
+import { TeamBoard } from "./TeamBoard";
 import { Icon, IconButton, LogoMark } from "./ui";
 
 type Tab = "now" | "tasks" | "context" | "activity" | "settings";
@@ -171,15 +171,7 @@ export function Widget({
         {status === "empty" && <Onboarding me={session.user.id} onReady={(id) => void loadWorkspaces(id)} />}
         {status === "ready" && data.workspace && (
           <div key={showTab} className="anim-in h-full">
-            {showTab === "now" && (
-              /* grade: com a janela mais larga, os cartões viram colunas; mais alta, cabem mais linhas */
-              <div className="grid h-full auto-rows-min grid-cols-[repeat(auto-fill,minmax(300px,1fr))] content-start gap-2 overflow-y-auto p-2.5">
-                {/* alertas de conflito entram aqui (Fase 4); tarefas novas e avisos ficam no sino */}
-                {people.map((p) => (
-                  <TeamCard key={p.userId} p={p} now={now} isMe={p.userId === me} usage={usageOf(p.userId)} onRefreshClaude={p.userId === me ? refreshClaude : undefined} />
-                ))}
-              </div>
-            )}
+            {showTab === "now" && <TeamBoard people={people} me={me} now={now} usageOf={usageOf} onRefreshClaude={refreshClaude} />}
             {showTab === "tasks" && (
               <TasksTab key={focusTask?.nonce ?? 0} data={data} me={session.user.id} now={now} initialOpenId={focusTask?.id ?? null} />
             )}

@@ -3,7 +3,7 @@
 import type { AgentKind, AgentSession, Task, UsageView } from "@cooper/shared";
 import { useEffect, useMemo, useState } from "react";
 import { Pill } from "../components/Pill";
-import { TeamCard } from "../components/TeamCard";
+import { TeamBoard } from "../components/TeamBoard";
 import { LogoMark } from "../components/ui";
 import type { PersonView } from "../lib/people";
 
@@ -135,10 +135,8 @@ export function DemoPreview() {
           <span className="font-semibold">Hacko (demo)</span>
           <span className="ml-auto text-[10.5px] text-muted">{shown.length} pessoas · arraste o canto ↘</span>
         </header>
-        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(300px,1fr))] content-start gap-2 overflow-y-auto p-2.5">
-          {shown.map((p) => (
-            <TeamCard key={p.userId} p={p} now={now} isMe={p.userId === me} usage={usage[p.userId] ?? []} />
-          ))}
+        <div className="min-h-0 flex-1">
+          <TeamBoard people={shown} me={me} now={now} usageOf={(id) => usage[id] ?? []} />
         </div>
       </div>
     </div>
