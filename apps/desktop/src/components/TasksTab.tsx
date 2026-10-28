@@ -54,7 +54,7 @@ export function TasksTab({ data, me, now, initialOpenId = null }: { data: Worksp
       <div className="flex-1 overflow-y-auto px-2.5 pb-2.5">
         <TaskList key={view} tasks={lists[view]} data={data} me={me} onOpen={setOpenId} />
       </div>
-      {open && <TaskPanel task={open} data={data} me={me} now={now} onClose={() => setOpenId(null)} />}
+      {open && <TaskPanel task={open} data={data} me={me} now={now} onClose={() => setOpenId(null)} onOpenTask={setOpenId} />}
     </div>
   );
 }

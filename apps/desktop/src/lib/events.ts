@@ -49,6 +49,8 @@ export function describeEvent(e: Pick<TaskEvent, "type" | "payload">, name: (id:
       return { icon: "activity", tone: "text-muted", text: String(p.text ?? "progresso") };
     case "complete_task":
       return { icon: "check", tone: "text-run", text: "concluiu a tarefa", detail: quote(p.summary) };
+    case "comment_added":
+      return { icon: "edit", tone: "text-accent", text: "comentou", detail: quote(p.text) };
     case "attachment_added":
       return { icon: "plus", tone: "text-accent", text: "anexou um arquivo", detail: String(p.name ?? "") };
     case "attachment_removed":

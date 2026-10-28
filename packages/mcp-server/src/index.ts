@@ -231,6 +231,59 @@ server.registerTool(
 );
 
 server.registerTool(
+  "create_subtask",
+  {
+    title: "Criar subtarefa",
+    description:
+      "Divide uma tarefa: cria uma subtarefa dela (um nível). Quando todas as subtarefas terminam, a tarefa-mãe vai para revisão sozinha.",
+    inputSchema: {
+      parent_number: taskNumber,
+      title: z.string().trim().min(1).max(200),
+      prompt: z.string().max(20000).optional(),
+      assigned_to: z.string().max(200).optional().describe("Nome ou e-mail; omitido: o próprio usuário"),
+    },
+  },
+  ({ parent_number, title, prompt, assigned_to }) =>
+    rpc("mcp_create_subtask", { p_parent: parent_number, p_title: title, p_prompt: prompt ?? null, p_assignee: assigned_to ?? null }),
+);
+
+server.registerTool(
+  "get_task_discussion",
+  {
+    title: "Comentários e subtarefas",
+    description: "Comentários (pessoas e agentes), subtarefas, prioridade e prazo de uma tarefa.",
+    inputSchema: { task_number: taskNumber },
+  },
+  ({ task_number }) => rpc("mcp_get_task_discussion", { p_number: task_number }),
+);
+
+server.registerTool(
+  "add_task_comment",
+  {
+    title: "Comentar na tarefa",
+    description: "Comentário curto na tarefa, visível ao time como 'declarado' (decisão, bloqueio, combinado). Nada de código ou conversa.",
+    inputSchema: { task_number: taskNumber, text: z.string().trim().min(1).max(2000) },
+  },
+  ({ task_number, text }) => rpc("mcp_add_task_comment", { p_number: task_number, p_text: text }),
+);
+
+server.registerTool(
+  "plan_task",
+  {
+    title: "Prioridade e prazo",
+    description: "Define prioridade (0 nenhuma, 1 baixa, 2 média, 3 alta, 4 urgente) e/ou prazo (AAAA-MM-DD) de uma tarefa.",
+    inputSchema: {
+      task_number: taskNumber,
+      priority: z.number().int().min(0).max(4).optional(),
+      due_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      clear_due: z.boolean().optional().describe("Remove o prazo"),
+    },
+  },
+  ({ task_number, priority, due_on, clear_due }) =>
+    rpc("mcp_plan_task", { p_number: task_number, p_priority: priority ?? null, p_due_on: due_on ?? null, p_clear_due: clear_due ?? false }),
+);
+
+server.registerTool(
   "accept_task",
   {
     title: "Aceitar tarefa",

@@ -44,6 +44,12 @@ export interface Task {
   accepted_at: string | null;
   declined_at: string | null;
   decline_reason: string | null;
+  /** Tarefa-mãe (um nível de subtarefas). */
+  parent_id: string | null;
+  /** 0 nenhuma, 1 baixa, 2 média, 3 alta, 4 urgente. */
+  priority: number;
+  /** Prazo (AAAA-MM-DD), opcional. */
+  due_on: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;

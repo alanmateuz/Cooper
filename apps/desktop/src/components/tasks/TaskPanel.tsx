@@ -7,11 +7,12 @@ import { memberName } from "../../lib/names";
 import type { WorkspaceData } from "../../lib/useWorkspace";
 import { ConfirmBar, Icon, SourceBadge } from "../ui";
 import { Attachments } from "./Attachments";
+import { Comments, dueLabel, PRIORITY_LABELS, Subtasks } from "./Discussion";
 import { RespondButtons } from "./RespondButtons";
 
 const ACCEPTED: TaskStatus[] = ["backlog", "in_progress", "in_review"];
 
-export function TaskPanel({ task, data, me, now, onClose }: { task: Task; data: WorkspaceData; me: string; now: Date; onClose: () => void }) {
+export function TaskPanel({ task, data, me, now, onClose, onOpenTask }: { task: Task; data: WorkspaceData; me: string; now: Date; onClose: () => void; onOpenTask?: (id: string) => void }) {
   const [err, setErr] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -106,6 +107,25 @@ export function TaskPanel({ task, data, me, now, onClose }: { task: Task; data: 
                   </option>
                 ))}
               </select>
+              <label className="text-muted" htmlFor="pr">
+                Prioridade
+              </label>
+              <select id="pr" value={task.priority ?? 0} onChange={(e) => void patch({ priority: Number(e.target.value) })} className="rounded border border-line bg-raised px-1 py-0.5">
+                {PRIORITY_LABELS.map((l, i) => (
+                  <option key={l} value={i}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+              <label className="text-muted" htmlFor="due">
+                Prazo
+              </label>
+              <span className="flex items-center gap-1.5">
+                <input id="due" type="date" value={task.due_on ?? ""} onChange={(e) => void patch({ due_on: e.target.value || null })} className="min-w-0 flex-1 rounded border border-line bg-raised px-1 py-0.5" />
+                {task.due_on && task.status !== "done" && (
+                  <span className={`shrink-0 text-[10px] ${dueLabel(task.due_on, now).late ? "font-medium text-danger" : "text-muted"}`}>{dueLabel(task.due_on, now).text}</span>
+                )}
+              </span>
             </div>
             {task.status === "awaiting_acceptance" && task.assignee_id === me && <RespondButtons task={task} />}
             {task.status === "awaiting_acceptance" && task.assignee_id !== me && (
@@ -132,7 +152,9 @@ export function TaskPanel({ task, data, me, now, onClose }: { task: Task; data: 
                 ))}
               </Block>
             )}
+            <Subtasks task={task} data={data} me={me} onOpen={onOpenTask} />
             <Attachments task={task} data={data} me={me} />
+            <Comments task={task} data={data} me={me} now={now} />
             <Block title="Eventos recentes">
               {events.length === 0 && <span className="text-muted">nenhum</span>}
               {events.map((e) => (
