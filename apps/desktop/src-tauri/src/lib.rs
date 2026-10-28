@@ -2,6 +2,7 @@ mod agent_config;
 mod ai_usage;
 mod claude_limits;
 mod claude_statusline;
+mod downloads;
 mod paths;
 mod project_instructions;
 
@@ -52,6 +53,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             agent_config::connect_agent,
             ai_usage::read_ai_usage,
+            downloads::save_download,
             claude_limits::refresh_claude_limits,
             claude_statusline::preview_claude_statusline,
             claude_statusline::install_claude_statusline,

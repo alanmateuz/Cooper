@@ -6,6 +6,7 @@ import { timeAgo } from "../../lib/format";
 import { memberName } from "../../lib/names";
 import type { WorkspaceData } from "../../lib/useWorkspace";
 import { ConfirmBar, Icon, SourceBadge } from "../ui";
+import { Attachments } from "./Attachments";
 import { RespondButtons } from "./RespondButtons";
 
 const ACCEPTED: TaskStatus[] = ["backlog", "in_progress", "in_review"];
@@ -131,6 +132,7 @@ export function TaskPanel({ task, data, me, now, onClose }: { task: Task; data: 
                 ))}
               </Block>
             )}
+            <Attachments task={task} data={data} me={me} />
             <Block title="Eventos recentes">
               {events.length === 0 && <span className="text-muted">nenhum</span>}
               {events.map((e) => (
