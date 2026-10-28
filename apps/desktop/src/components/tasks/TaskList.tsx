@@ -32,6 +32,11 @@ export function TaskList({ tasks, data, me, onOpen }: { tasks: Task[]; data: Wor
   const active = tasks.filter((t) => t.status !== "awaiting_acceptance" && !CLOSED.includes(t.status)).sort((a, b) => ORDER[a.status] - ORDER[b.status] || a.number - b.number);
   const declined = tasks.filter((t) => t.status === "declined");
   const done = tasks.filter((t) => t.status === "done").sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  // arquivamento leve (como no Linear): concluídas há mais de 14 dias ficam escondidas até pedir
+  const [showOld, setShowOld] = useState(false);
+  const cutoff = Date.now() - 14 * 86_400_000;
+  const recentDone = done.filter((t) => new Date(t.updated_at).getTime() >= cutoff);
+  const oldDone = done.length - recentDone.length;
   const shownInvites = allInvites ? awaiting : awaiting.slice(0, INVITES_SHOWN);
 
   if (tasks.length === 0) return <p className="px-1 pt-6 text-center text-muted">Nenhuma tarefa aqui.</p>;
@@ -78,7 +83,18 @@ export function TaskList({ tasks, data, me, onOpen }: { tasks: Task[]; data: Wor
             </span>
             Concluídas {done.length}
           </button>
-          {showClosed && <div className="mt-1">{done.map((t) => <TaskRow key={t.id} task={t} onOpen={() => onOpen(t.id)} />)}</div>}
+          {showClosed && (
+            <div className="mt-1">
+              {(showOld ? done : recentDone).map((t) => (
+                <TaskRow key={t.id} task={t} onOpen={() => onOpen(t.id)} />
+              ))}
+              {oldDone > 0 && (
+                <button type="button" onClick={() => setShowOld((v) => !v)} className="w-full rounded-md py-1 text-[10.5px] text-muted hover:bg-raised hover:text-text">
+                  {showOld ? "esconder as antigas" : `mostrar ${oldDone} concluída${oldDone === 1 ? "" : "s"} há mais de 14 dias`}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
