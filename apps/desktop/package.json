@@ -14,6 +14,7 @@
     "@cooper/shared": "workspace:*",
     "@supabase/supabase-js": "^2.118.0",
     "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-dialog": "^2.8.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

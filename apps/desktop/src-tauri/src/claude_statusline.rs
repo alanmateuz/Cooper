@@ -28,7 +28,7 @@ pub struct StatusLinePlan {
     pub backup: Option<String>,
 }
 
-fn settings_path() -> Result<PathBuf, String> {
+pub(crate) fn settings_path() -> Result<PathBuf, String> {
     let base = std::env::var_os("CLAUDE_CONFIG_DIR")
         .map(PathBuf::from)
         .or_else(|| dirs::home_dir().map(|h| h.join(".claude")))
@@ -50,7 +50,7 @@ fn our_command(app: &AppHandle) -> Result<String, String> {
     Ok(format!("node \"{s}\""))
 }
 
-fn read_settings() -> Result<(PathBuf, String, Value), String> {
+pub(crate) fn read_settings() -> Result<(PathBuf, String, Value), String> {
     let path = settings_path()?;
     let raw = if path.exists() { fs::read_to_string(&path).map_err(|e| e.to_string())? } else { "{}".into() };
     let root: Value = serde_json::from_str(&raw).map_err(|e| format!("settings.json inválido: {e}"))?;
@@ -68,7 +68,7 @@ fn current_command(root: &Value) -> Option<String> {
     root.get("statusLine").filter(|v| !is_ours(v)).and_then(|v| v.get("command")).and_then(Value::as_str).map(String::from)
 }
 
-fn save(path: &PathBuf, raw: &str, root: &Value) -> Result<(), String> {
+pub(crate) fn save(path: &PathBuf, raw: &str, root: &Value) -> Result<(), String> {
     let mut out = serde_json::to_string_pretty(root).map_err(|e| e.to_string())?;
     if raw.ends_with('\n') || raw == "{}" {
         out.push('\n');

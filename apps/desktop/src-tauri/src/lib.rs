@@ -1,8 +1,10 @@
 mod agent_config;
 mod ai_usage;
 mod claude_limits;
+mod claude_hooks;
 mod claude_statusline;
 mod downloads;
+mod git_repo;
 mod paths;
 mod project_instructions;
 
@@ -41,6 +43,7 @@ pub fn run() {
             }
         }))
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, shortcut, event| {
@@ -58,6 +61,10 @@ pub fn run() {
             claude_statusline::preview_claude_statusline,
             claude_statusline::install_claude_statusline,
             claude_statusline::remove_claude_statusline,
+            claude_hooks::preview_claude_hooks,
+            claude_hooks::install_claude_hooks,
+            claude_hooks::remove_claude_hooks,
+            git_repo::git_repo_status,
             project_instructions::preview_agent_instructions,
             project_instructions::write_agent_instructions
         ])

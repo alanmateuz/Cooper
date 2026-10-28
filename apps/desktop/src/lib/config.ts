@@ -95,7 +95,7 @@ export function decodeConnectionCode(code: string): ServerConfig | null {
   }
 }
 
-export const SCHEMA_VERSION = 16;
+export const SCHEMA_VERSION = 16; // a 17 (hooks) é opcional: sem ela o app funciona e só o "executando" não aparece
 
 export type ServerCheck = { ok: true; schema: number } | { ok: false; reason: string };
 

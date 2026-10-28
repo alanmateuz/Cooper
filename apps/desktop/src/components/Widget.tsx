@@ -12,6 +12,8 @@ import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, resizeFromMouseDow
 import { ContextTab } from "./ContextTab";
 import { BellButton, NotificationsPanel } from "./Notifications";
 import { ActivityTab } from "./ActivityTab";
+import { RepositorySection } from "./RepositorySection";
+import { useGitSync, useTeamRepo } from "../lib/repo";
 import { AgentVisibility, CoordinationSection, Empty, UiSoundsRow, NotificationSettings, PrivacySection, SettingsSection, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
 import { ClaudeStatusLine } from "./ClaudeStatusLine";
@@ -70,6 +72,10 @@ export function Widget({
   const alerts = 0; // regras de conflito: Fase 4
   const me = session.user.id;
   const myMember = data.members.find((m) => m.user_id === me);
+  // repositório do time e envio do estado do git local (a cada minuto, só no app desktop)
+  const { repo, reload: reloadRepo } = useTeamRepo(data.workspace?.id ?? null);
+  const [repoVersion, setRepoVersion] = useState(0);
+  useGitSync(data.workspace?.id ?? null, repo, repoVersion);
   const sharing = myMember?.share_usage ?? false;
   const { report: rawUsage, reload: reloadUsage } = useLocalUsage();
   // Agentes que a pessoa tirou do cartão (⚙ → Uso de IA): o uso deles não é lido para mostrar nem enviado.
@@ -212,6 +218,16 @@ export function Widget({
                 </SettingsSection>
                 <SettingsSection title="Projeto">
                   <ProjectSection data={data} me={session.user.id} onChanged={(keepId) => void loadWorkspaces(keepId)} />
+                </SettingsSection>
+                <SettingsSection title="Repositório">
+                  <RepositorySection
+                    key={data.workspace.id}
+                    workspaceId={data.workspace.id}
+                    isOwner={myMember?.role === "owner"}
+                    repo={repo}
+                    onRepoChange={() => void reloadRepo()}
+                    onPathChange={() => setRepoVersion((v) => v + 1)}
+                  />
                 </SettingsSection>
                 <SettingsSection title="IA e tarefas">
                   <CoordinationSection workspaceId={data.workspace.id} coordinator={myMember?.ai_coordinator ?? false} autoAccept={myMember?.auto_accept ?? false} />

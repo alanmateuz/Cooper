@@ -46,7 +46,8 @@
     ],
     "resources": {
       "../../../packages/mcp-server/dist/index.js": "mcp/index.js",
-      "../../../packages/mcp-server/dist/cooper-statusline.js": "mcp/cooper-statusline.js"
+      "../../../packages/mcp-server/dist/cooper-statusline.js": "mcp/cooper-statusline.js",
+      "../../../packages/mcp-server/dist/cooper-hook.js": "mcp/cooper-hook.js"
     },
     "windows": {
       "nsis": {

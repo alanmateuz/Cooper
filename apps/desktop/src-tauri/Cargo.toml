@@ -20,3 +20,4 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 toml_edit = "0.25.17"
 dirs = "7.0.0"
+tauri-plugin-dialog = "2"
