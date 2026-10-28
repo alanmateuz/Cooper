@@ -213,6 +213,7 @@ export function MembersSection({ data, me, now, onProfileChange }: { data: Works
   const [invites, setInvites] = useState<Invite[]>([]);
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [invited, setInvited] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -299,10 +300,8 @@ export function MembersSection({ data, me, now, onProfileChange }: { data: Works
             const error = await inviteMember(ws.id, clean, me);
             if (error) return setMsg({ ok: false, text: error });
             setEmail("");
-            setMsg({
-              ok: true,
-              text: `Convite criado. Mande para ${clean} o instalador do Cooper e o código de conexão (botão abaixo). Ela cola o código na primeira tela, cria a conta com esse e-mail e aceita o convite.`,
-            });
+            setInvited(clean);
+            setMsg({ ok: true, text: `Convite criado para ${clean}. Copie a mensagem abaixo e mande junto com o instalador do Cooper.` });
             void load();
           }}
         >
@@ -311,6 +310,7 @@ export function MembersSection({ data, me, now, onProfileChange }: { data: Works
         </form>
       )}
       {msg && <p className={`text-[10.5px] leading-snug ${msg.ok ? "text-run" : "text-danger"}`}>{msg.text}</p>}
+      {invited && <InviteMessageButton email={invited} project={ws.name} />}
       <ConnectionCodeButton />
     </section>
   );
@@ -352,6 +352,35 @@ function DisplayNameEditor({ data, me, onChange }: { data: WorkspaceData; me: st
       </div>
       {err && <p className="text-[10.5px] text-danger">{err}</p>}
     </form>
+  );
+}
+
+/**
+ * Mensagem pronta para mandar a quem foi convidado (WhatsApp, e-mail): o que fazer, com qual e-mail e o código.
+ * O Cooper não envia e-mail de convite; isso evita depender do SMTP do Supabase.
+ */
+function InviteMessageButton({ email, project }: { email: string; project: string }) {
+  const [copied, setCopied] = useState(false);
+  if (!serverConfig) return null;
+  const text = [
+    `Te convidei para o projeto "${project}" no Cooper (tarefas, contexto e uso de IA do time).`,
+    "",
+    "1. Instale o Cooper com o arquivo que mandei junto (no Windows, se aparecer \"o Windows protegeu o computador\", clique em Mais informações → Executar assim mesmo).",
+    "2. Na primeira tela, escolha \"Tenho um código de conexão\" e cole este código:",
+    encodeConnectionCode(serverConfig),
+    `3. Crie a conta com este e-mail: ${email} (tem que ser o mesmo do convite).`,
+    "4. Se pedir confirmação, abra o link que chegar no e-mail e depois entre no Cooper.",
+    `5. O convite para "${project}" aparece logo ao entrar: é só clicar em Entrar.`,
+  ].join("\n");
+  return (
+    <button
+      type="button"
+      data-sound="ok"
+      onClick={() => void navigator.clipboard.writeText(text).then(() => setCopied(true))}
+      className="w-full rounded-md bg-accent py-1 text-[10.5px] font-medium text-white hover:brightness-110"
+    >
+      {copied ? "Mensagem copiada: cole no WhatsApp ou e-mail" : "Copiar mensagem de convite"}
+    </button>
   );
 }
 
