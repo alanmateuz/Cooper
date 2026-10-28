@@ -4,7 +4,7 @@ import { initials } from "../lib/format";
 
 const DOT: Record<PresenceStatus, string> = {
   running: "bg-run shadow-[0_0_0_3px_color-mix(in_srgb,var(--run)_25%,transparent)]",
-  online: "bg-online",
+  online: "bg-run",
   // sólido: translúcido, sobre o anel escuro do tema escuro, parecia uma mancha preta
   idle: "bg-idle",
   unknown: "border border-dashed border-idle bg-transparent",
@@ -32,7 +32,8 @@ export function Avatar({ name, color, status, size = 24 }: { name: string; color
     <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>
       <span
         className="inline-flex h-full w-full items-center justify-center rounded-full font-semibold text-white"
-        style={{ background: color, fontSize: Math.round(size * 0.38) }}
+        // cor da pessoa um pouco apagada: identifica sem competir com os alertas de limite
+        style={{ background: `color-mix(in oklch, ${color} 72%, #6b7080)`, fontSize: Math.round(size * 0.38) }}
       >
         {initials(name)}
       </span>

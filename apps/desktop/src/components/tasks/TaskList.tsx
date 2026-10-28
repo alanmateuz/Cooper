@@ -11,14 +11,14 @@ const ORDER = Object.fromEntries(TASK_STATUSES.map((s, i) => [s, i])) as Record<
 export const CLOSED: TaskStatus[] = ["done", "declined"];
 const INVITES_SHOWN = 3;
 
-/** Cores de status: só para status que pedem atenção ou mostram progresso. */
+/** Cor só no que pede ação (aguardando aceite) ou está acontecendo (em andamento); o resto é neutro. */
 const STATUS_CHIP: Record<TaskStatus, string> = {
   awaiting_acceptance: "bg-accent/15 text-accent",
   backlog: "bg-raised text-muted",
-  in_progress: "bg-online/15 text-online",
-  in_review: "bg-warn/15 text-warn",
-  done: "bg-run/15 text-run",
-  declined: "bg-warn/15 text-warn",
+  in_progress: "bg-run/15 text-run",
+  in_review: "bg-raised text-text",
+  done: "bg-raised text-muted",
+  declined: "bg-raised text-muted",
 };
 
 export function StatusChip({ status }: { status: TaskStatus }) {

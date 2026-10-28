@@ -8,7 +8,7 @@ import type { WorkspaceData } from "../../lib/useWorkspace";
 import { SourceBadge } from "../ui";
 
 export const PRIORITY_LABELS = ["Nenhuma", "Baixa", "Média", "Alta", "Urgente"] as const;
-export const PRIORITY_CHIP = ["", "bg-raised text-muted", "bg-online/15 text-online", "bg-warn/15 text-warn", "bg-danger/15 text-danger"] as const;
+export const PRIORITY_CHIP = ["", "bg-raised text-muted", "bg-raised text-text", "bg-warn/15 text-warn", "bg-danger/15 text-danger"] as const;
 
 /** "vence hoje", "atrasada 2 d", "em 3 d" — prazo em relação a hoje (data local). */
 export function dueLabel(due: string, now: Date): { text: string; late: boolean } {
@@ -57,7 +57,7 @@ export function Subtasks({ task, data, me, onOpen }: { task: Task; data: Workspa
         {subs.length > 0 && (
           <span className="flex flex-1 items-center gap-1.5 text-[10px] text-muted">
             <span className="h-1 flex-1 overflow-hidden rounded-full bg-raised">
-              <span className="block h-full rounded-full bg-run transition-[width] duration-500" style={{ width: `${(done / subs.length) * 100}%` }} />
+              <span className="block h-full rounded-full bg-muted transition-[width] duration-500" style={{ width: `${(done / subs.length) * 100}%` }} />
             </span>
             {done}/{subs.length}
           </span>

@@ -4,9 +4,9 @@ import { Icon } from "./ui";
 
 const KIND: Record<NotificationKind, { icon: Parameters<typeof Icon>[0]["name"]; tone: string }> = {
   task_received: { icon: "list", tone: "bg-accent/15 text-accent" },
-  task_done: { icon: "check", tone: "bg-run/15 text-run" },
-  task_accepted: { icon: "check", tone: "bg-online/15 text-online" },
-  task_declined: { icon: "close", tone: "bg-warn/15 text-warn" },
+  task_done: { icon: "check", tone: "bg-raised text-text" },
+  task_accepted: { icon: "check", tone: "bg-raised text-muted" },
+  task_declined: { icon: "close", tone: "bg-raised text-muted" },
   usage_critical: { icon: "gauge", tone: "bg-danger/15 text-danger" },
 };
 
@@ -23,7 +23,7 @@ export function BellButton({ unread, open, onClick }: { unread: number; open: bo
       className={`relative inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:bg-raised ${open ? "bg-raised text-accent" : unread ? "text-text" : "text-muted hover:text-text"}`}
     >
       <Icon name="bell" size={13} />
-      {unread > 0 && <span className="absolute top-[3px] right-[3px] h-2 w-2 rounded-full bg-run ring-2 ring-bg" />}
+      {unread > 0 && <span className="absolute top-[3px] right-[3px] h-2 w-2 rounded-full bg-accent ring-2 ring-bg" />}
     </button>
   );
 }
@@ -72,7 +72,7 @@ export function NotificationsPanel({
                 </span>
                 <span className="flex shrink-0 flex-col items-end gap-1 pt-px">
                   <span className="text-[10px] text-muted">{timeAgo(new Date(n.at).toISOString(), now)}</span>
-                  {isFresh && <span className="h-1.5 w-1.5 rounded-full bg-run" aria-label="nova" />}
+                  {isFresh && <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-label="nova" />}
                 </span>
               </>
             );

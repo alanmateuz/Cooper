@@ -44,11 +44,11 @@ export function describeEvent(e: Pick<TaskEvent, "type" | "payload">, name: (id:
       return { icon: "edit", tone: p.reaccept ? "text-warn" : "text-accent", text: "editou a tarefa", detail: [fields, p.reaccept ? "pede novo aceite" : ""].filter(Boolean).join(" · ") || undefined };
     }
     case "start_task":
-      return { icon: "play", tone: "text-online", text: "começou a tarefa", detail: p.branch ? `em ${String(p.branch)}` : undefined };
+      return { icon: "play", tone: "text-run", text: "começou a tarefa", detail: p.branch ? `em ${String(p.branch)}` : undefined };
     case "report_progress":
       return { icon: "activity", tone: "text-muted", text: String(p.text ?? "progresso") };
     case "complete_task":
-      return { icon: "check", tone: "text-run", text: "concluiu a tarefa", detail: quote(p.summary) };
+      return { icon: "check", tone: "text-text", text: "concluiu a tarefa", detail: quote(p.summary) };
     case "comment_added":
       return { icon: "edit", tone: "text-accent", text: "comentou", detail: quote(p.text) };
     case "attachment_added":
@@ -62,11 +62,11 @@ export function describeEvent(e: Pick<TaskEvent, "type" | "payload">, name: (id:
       return { icon: "book", tone: p.action === "delete" ? "text-danger" : "text-accent", text: `${verb} o bloco`, detail: String(p.block_title ?? "") };
     }
     case "status_changed":
-      if (p.from_status === "awaiting_acceptance" && to === "backlog") return { icon: "check", tone: "text-online", text: "aceitou a tarefa" };
+      if (p.from_status === "awaiting_acceptance" && to === "backlog") return { icon: "check", tone: "text-muted", text: "aceitou a tarefa" };
       if (to === "declined") return { icon: "close", tone: "text-warn", text: "recusou a tarefa", detail: quote(p.reason) };
       if (p.from_status === "declined" && to === "awaiting_acceptance") return { icon: "list", tone: "text-accent", text: "reenviou a tarefa" };
       if (to === "awaiting_acceptance") return { icon: "list", tone: "text-warn", text: "voltou para aguardando aceite" };
-      if (to === "done") return { icon: "check", tone: "text-run", text: "concluiu a tarefa" };
+      if (to === "done") return { icon: "check", tone: "text-text", text: "concluiu a tarefa" };
       return { icon: "chevron", tone: "text-muted", text: `moveu para ${TASK_STATUS_LABELS[to!] ?? to}` };
     case "git_snapshot":
       return { icon: "branch", tone: "text-muted", text: `git: ${String(p.branch ?? "?")}`, detail: p.commit ? `@ ${String(p.commit)}` : undefined };

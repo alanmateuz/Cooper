@@ -66,7 +66,7 @@ export function TeamCard({
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-1">
             {showPresence && (
-              <span className={`text-[10.5px] font-medium ${p.presence === "running" ? "text-run" : "text-online"}`}>{PRESENCE_LABELS[p.presence]}</span>
+              <span className={`text-[10.5px] font-medium ${p.presence === "running" ? "text-run" : "text-muted"}`}>{PRESENCE_LABELS[p.presence]}</span>
             )}
             {agents.map((a) => (
               <span key={a} className="rounded-full bg-raised px-1.5 py-px text-[10px] text-muted">
@@ -152,7 +152,7 @@ function resetLabel(at: Date, now: Date): string {
 }
 
 export const tone = (pct: number) => (pct >= 90 ? "danger" : pct >= 70 ? "warn" : "ok");
-export const BAR = { ok: "bg-accent", warn: "bg-warn", danger: "bg-danger" } as const;
+export const BAR = { ok: "bg-muted", warn: "bg-warn", danger: "bg-danger" } as const;
 export const TEXT = { ok: "text-text", warn: "text-warn", danger: "text-danger" } as const;
 const PEAK_CHIP = { ok: "bg-raised text-muted", warn: "bg-warn/15 text-warn", danger: "bg-danger/15 text-danger" } as const;
 
