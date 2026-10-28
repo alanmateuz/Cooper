@@ -9,6 +9,7 @@ import type { ShareStatus } from "../lib/usage";
 import type { WorkspaceData } from "../lib/useWorkspace";
 import { AgentsSection } from "./AgentsSection";
 import { ProjectInstructions } from "./ProjectInstructions";
+import { playUi, setUiSounds, uiSoundsEnabled } from "../lib/sound";
 
 
 export function SettingsTab({
@@ -115,6 +116,28 @@ export function SettingsSection({ title, rows, children }: { title: string; rows
 }
 
 /** ⚙ → Notificações: som e aviso de uso crítico, com botões para ouvir cada alerta. */
+/** Ajustes → Notificações: sons baixinhos ao ligar chaves, confirmar e remover (separados dos alertas). */
+export function UiSoundsRow() {
+  const [on, setOn] = useState(uiSoundsEnabled);
+  return (
+    <div className="flex items-start gap-3">
+      <div className="min-w-0 flex-1">
+        <div className="font-medium">Sons da interface</div>
+        <p className="text-[10.5px] leading-snug text-muted">Toques curtos e baixos ao ligar uma chave, confirmar (aceitar, salvar, criar) e remover.</p>
+      </div>
+      <Toggle
+        checked={on}
+        onChange={(v) => {
+          setUiSounds(v);
+          setOn(v);
+          if (v) playUi("ok");
+        }}
+        label="Sons da interface"
+      />
+    </div>
+  );
+}
+
 export function NotificationSettings({
   sound,
   setSound,

@@ -43,7 +43,7 @@ export function TaskPanel({ task, data, me, now, onClose }: { task: Task; data: 
   }
 
   return (
-    <aside className="absolute inset-0 z-10 flex flex-col bg-panel" role="dialog" aria-label={`Tarefa #${task.number}`}>
+    <aside className="anim-slide absolute inset-0 z-10 flex flex-col bg-panel" role="dialog" aria-label={`Tarefa #${task.number}`}>
       <header className="flex items-center gap-2 border-b border-line px-2 py-1.5">
         <span className="text-muted">#{task.number}</span>
         <span className="min-w-0 flex-1 truncate font-semibold">{task.title}</span>

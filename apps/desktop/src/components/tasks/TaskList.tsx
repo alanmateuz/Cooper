@@ -4,6 +4,7 @@ import { memberName } from "../../lib/names";
 import type { WorkspaceData } from "../../lib/useWorkspace";
 import { Icon } from "../ui";
 import { RespondButtons } from "./RespondButtons";
+import { useFlash } from "../../lib/motion";
 
 const ORDER = Object.fromEntries(TASK_STATUSES.map((s, i) => [s, i])) as Record<TaskStatus, number>;
 export const CLOSED: TaskStatus[] = ["done", "declined"];
@@ -95,8 +96,9 @@ function Group({ title, count, children }: { title: string; count: number; child
 }
 
 function TaskRow({ task, onOpen }: { task: Task; onOpen: () => void }) {
+  const flash = useFlash(task.status);
   return (
-    <button type="button" onClick={onOpen} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-raised">
+    <button type="button" onClick={onOpen} className={`anim-in flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-raised ${flash}`}>
       <span className="w-7 shrink-0 text-[10.5px] text-muted tabular-nums">#{task.number}</span>
       <span className={`min-w-0 flex-1 truncate ${task.status === "done" ? "text-muted line-through" : ""}`}>{task.title}</span>
       <StatusChip status={task.status} />

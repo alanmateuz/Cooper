@@ -12,7 +12,7 @@ import { dragFromMouseDown, hideWindow, inTauri, onTrayEvent, resizeFromMouseDow
 import { ContextTab } from "./ContextTab";
 import { BellButton, NotificationsPanel } from "./Notifications";
 import { ActivityTab } from "./ActivityTab";
-import { AgentVisibility, CoordinationSection, Empty, NotificationSettings, PrivacySection, SettingsSection, SettingsTab } from "./OtherTabs";
+import { AgentVisibility, CoordinationSection, Empty, UiSoundsRow, NotificationSettings, PrivacySection, SettingsSection, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
 import { ClaudeStatusLine } from "./ClaudeStatusLine";
 import { CreateWorkspace, MembersSection, Onboarding, PendingInvites, ProjectSection } from "./Team";
@@ -170,7 +170,7 @@ export function Widget({
         {status === "error" && <Empty>Erro ao carregar: {error}</Empty>}
         {status === "empty" && <Onboarding me={session.user.id} onReady={(id) => void loadWorkspaces(id)} />}
         {status === "ready" && data.workspace && (
-          <>
+          <div key={showTab} className="anim-in h-full">
             {showTab === "now" && (
               /* grade: com a janela mais larga, os cartões viram colunas; mais alta, cabem mais linhas */
               <div className="grid h-full auto-rows-min grid-cols-[repeat(auto-fill,minmax(300px,1fr))] content-start gap-2 overflow-y-auto p-2.5">
@@ -212,6 +212,7 @@ export function Widget({
                     onTest={() => playChime("normal")}
                     onTestCritical={() => playChime("critical")}
                   />
+                  <UiSoundsRow />
                 </SettingsSection>
                 <SettingsSection title="Equipe">
                   <MembersSection data={data} me={session.user.id} now={now} onProfileChange={() => void reload("workspace_members", data.workspace!.id)} />
@@ -230,7 +231,7 @@ export function Widget({
                 </SettingsSection>
               </SettingsTab>
             )}
-          </>
+          </div>
         )}
         {notifOpen && status === "ready" && (
           <NotificationsPanel
@@ -261,7 +262,7 @@ export function Widget({
               <Icon name={t.icon} size={14} />
               <span className="text-[10px] leading-none">{t.label === "Configurações" ? "Ajustes" : t.label}</span>
               {t.id === "tasks" && awaiting.length > 0 && (
-                <span className="absolute top-0.5 right-[calc(50%-17px)] min-w-3.5 rounded-full bg-accent px-0.5 text-center text-[10px] leading-3.5 font-semibold text-white" aria-label={`${awaiting.length} aguardando aceite`}>
+                <span key={awaiting.length} className="anim-pop absolute top-0.5 right-[calc(50%-17px)] min-w-3.5 rounded-full bg-accent px-0.5 text-center text-[10px] leading-3.5 font-semibold text-white" aria-label={`${awaiting.length} aguardando aceite`}>
                   {awaiting.length}
                 </span>
               )}

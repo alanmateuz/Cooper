@@ -8,9 +8,11 @@ import { ConfirmBar, Icon, SourceBadge } from "../ui";
 import { EditBlock } from "./EditBlock";
 import { History } from "./History";
 import { who } from "./shared";
+import { useFlash } from "../../lib/motion";
 
 export function BlockCard({ block, data, now, open, setOpen }: { block: ContextBlock; data: WorkspaceData; now: Date; open: boolean; setOpen: (v: boolean) => void }) {
   const [mode, setMode] = useState<"view" | "edit" | "history">("view");
+  const flash = useFlash(block.version);
   const [err, setErr] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -30,7 +32,7 @@ export function BlockCard({ block, data, now, open, setOpen }: { block: ContextB
   }
 
   return (
-    <section className="rounded-xl border border-line bg-panel">
+    <section className={`anim-in rounded-xl border border-line bg-panel ${flash}`}>
       <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-start gap-2 px-3 py-2 text-left">
         <span className={`mt-1 text-muted transition-transform ${open ? "rotate-90" : ""}`}>
           <Icon name="chevron" size={10} />

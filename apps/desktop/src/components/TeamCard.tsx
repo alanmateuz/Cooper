@@ -5,6 +5,7 @@ import { shortSha, timeAgo } from "../lib/format";
 import { shortName } from "../lib/names";
 import type { PersonView } from "../lib/people";
 import { Avatar, Icon, SourceBadge } from "./ui";
+import { useFlash } from "../lib/motion";
 
 /**
  * Cartão de uma pessoa na aba Agora. Ordem de leitura:
@@ -26,6 +27,8 @@ export function TeamCard({
   onRefreshClaude?: () => Promise<void>;
 }) {
   const s = p.session;
+  // brilho rápido quando muda o que a pessoa está fazendo ou o limite dela
+  const flash = useFlash(`${p.task?.id ?? ""}|${s?.activity_text ?? ""}|${usage.map((u) => Math.round(u.primary?.pct ?? -1)).join(",")}`);
   const snap = p.snapshot;
   // Etiquetas só de agentes em uso: sessão aberta com atividade nas últimas 12 h, ou uso hoje.
   // (Antes a sessão mais recente valia para sempre, e um agente abandonado nunca saía do cartão.)
@@ -41,7 +44,7 @@ export function TeamCard({
   const showPresence = p.presence === "running" || p.presence === "online";
 
   return (
-    <article className="rounded-xl border border-line bg-panel p-3">
+    <article className={`anim-in rounded-xl border border-line bg-panel p-3 ${flash}`}>
       <header className="flex items-center gap-2.5">
         <Avatar name={p.profile.display_name} color={p.profile.avatar_color} status={p.presence} size={30} />
         <div className="min-w-0 flex-1">
@@ -215,7 +218,7 @@ function Meter({ label, pct, reset }: { label: string; pct: number; reset: strin
         <span className={`text-[13px] leading-none font-semibold tabular-nums ${TEXT[t]}`}>{Math.round(pct)}%</span>
       </div>
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-raised" role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`limite ${label}`}>
-        <div className={`h-full rounded-full ${BAR[t]}`} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} />
+        <div className={`h-full rounded-full transition-[width] duration-700 ease-out ${BAR[t]}`} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} />
       </div>
       <div className="mt-1 truncate text-[10px] leading-none text-muted">reinicia {reset}</div>
     </div>
