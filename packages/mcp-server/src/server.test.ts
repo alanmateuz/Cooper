@@ -31,6 +31,7 @@ describe.skipIf(!existsSync(SERVER))("servidor MCP", () => {
         "get_task_context", "get_workspace_context", "patch_context_block", "report_progress", "start_task", "update_context_block",
         "assign_task", "get_team_workload", "update_task",
         "add_task_comment", "create_subtask", "get_task_discussion", "plan_task",
+        "save_context_summary", "summarize_context",
       ].sort(),
     );
   });

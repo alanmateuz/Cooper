@@ -95,7 +95,7 @@ export function decodeConnectionCode(code: string): ServerConfig | null {
   }
 }
 
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 export type ServerCheck = { ok: true; schema: number } | { ok: false; reason: string };
 

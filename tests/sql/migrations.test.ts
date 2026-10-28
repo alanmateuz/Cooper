@@ -28,7 +28,7 @@ describe("migrações", () => {
   it("aplicam do zero, em ordem", async () => {
     const db = await freshDb();
     const r = await db.query<{ info: { app: string; schema: number } }>("select public.cooper_server_info() as info");
-    expect(r.rows[0]!.info).toEqual({ app: "cooper", schema: 15 });
+    expect(r.rows[0]!.info).toEqual({ app: "cooper", schema: 16 });
   });
 
   it("install.sql está em dia com as migrações", () => {

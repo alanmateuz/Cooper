@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { WorkspaceData } from "../lib/useWorkspace";
 import { BlockCard } from "./context/BlockCard";
+import { ContextSize } from "./context/ContextSize";
 import { NewBlock, PasteContext } from "./context/NewBlock";
 import { RecentChanges } from "./context/RecentChanges";
 import { Icon } from "./ui";
@@ -27,6 +28,7 @@ export function ContextTab({ data, me, now }: { data: WorkspaceData; me: string;
       <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-2.5">
         {adding === "new" && <NewBlock workspaceId={data.workspace!.id} onDone={() => setAdding(null)} />}
         {adding === "paste" && <PasteContext data={data} onDone={() => setAdding(null)} />}
+        <ContextSize data={data} />
         <RecentChanges data={data} me={me} now={now} onShow={(id) => setOpen((o) => ({ ...o, [id]: true }))} />
         {blocks.length === 0 && !adding && (
           <p className="px-1 pt-6 pb-2 text-center leading-snug text-muted">Nenhum contexto ainda. Cole um texto (os títulos # viram blocos) ou crie um bloco.</p>

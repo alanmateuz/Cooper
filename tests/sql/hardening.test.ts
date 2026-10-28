@@ -41,7 +41,7 @@ beforeEach(setup);
 describe("versão do esquema", () => {
   it("cooper_server_info responde para anon", async () => {
     const r = await asAgent(db, (tx) => one(tx.query<{ r: unknown }>("select public.cooper_server_info() as r")));
-    expect(r.r).toEqual({ app: "cooper", schema: 15 });
+    expect(r.r).toEqual({ app: "cooper", schema: 16 });
   });
 });
 

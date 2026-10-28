@@ -231,6 +231,30 @@ server.registerTool(
 );
 
 server.registerTool(
+  "summarize_context",
+  {
+    title: "Resumir o contexto",
+    description: "Só quando o usuário pedir para resumir o contexto. Devolve os blocos e como resumir; grave cada um com save_context_summary.",
+    inputSchema: { blocks: z.array(z.string().max(120)).max(20).optional().describe("Títulos; omitido: todos") },
+  },
+  ({ blocks }) => rpc("mcp_summarize_context", { p_blocks: blocks?.length ? blocks : null }),
+);
+
+server.registerTool(
+  "save_context_summary",
+  {
+    title: "Gravar resumo de bloco",
+    description: "Substitui o bloco pelo resumo (precisa ser menor). Guarda o anterior no histórico e mede antes/depois.",
+    inputSchema: {
+      block: z.string().min(1).max(120),
+      content: z.string().max(20000),
+      base_version: z.number().int().positive(),
+    },
+  },
+  ({ block, content, base_version }) => rpc("mcp_save_context_summary", { p_block: block, p_content: content, p_base_version: base_version }),
+);
+
+server.registerTool(
   "create_subtask",
   {
     title: "Criar subtarefa",
