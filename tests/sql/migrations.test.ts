@@ -6,7 +6,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import { describe, expect, it } from "vitest";
 // @ts-expect-error script .mjs sem tipos
 import { buildInstallSql } from "../../scripts/build-install-sql.mjs";
-import { freshDb, MIGRATIONS_DIR } from "./harness";
+import { freshDb, migrationFiles, MIGRATIONS_DIR } from "./harness";
 
 /** Assinatura do esquema público: colunas, funções, policies, triggers e valores de enum. */
 async function schemaSignature(db: PGlite): Promise<string[]> {
@@ -40,5 +40,13 @@ describe("migrações", () => {
     const viaMigrations = await schemaSignature(await freshDb());
     const viaInstall = await schemaSignature(await freshDb({ sql: `begin;\n${buildInstallSql()}\ncommit;` }));
     expect(viaInstall).toEqual(viaMigrations);
+  });
+
+  it("supabase/upgrades/13-para-16.sql leva um servidor no esquema 13 ao mesmo esquema de uma instalação nova", async () => {
+    const upTo13 = migrationFiles().filter((f) => f < "20261028000014").map((f) => readFileSync(join(MIGRATIONS_DIR, f), "utf8"));
+    const upgrade = readFileSync(join(MIGRATIONS_DIR, "..", "upgrades", "13-para-16.sql"), "utf8");
+    const db = await freshDb({ sql: upTo13.join("\n;\n") });
+    await db.exec(upgrade);
+    expect(await schemaSignature(db)).toEqual(await schemaSignature(await freshDb()));
   });
 });
