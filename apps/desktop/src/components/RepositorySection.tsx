@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { friendlyError } from "../lib/errors";
 import { gitStatus, repoPath, sameRepo, setRepoPath, type GitStatus, type Repository } from "../lib/repo";
 import { supabase } from "../lib/supabase";
 import { inTauri } from "../lib/window";
+
+const DEMO_STATUS: GitStatus = { remote: { owner: "alanmateuz", name: "hacko" }, branch: "claude/header", head_sha: null, ahead: 0, behind: 1, dirty_files_count: 3 };
 
 async function pickFolder(): Promise<string | null> {
   const { open } = await import("@tauri-apps/plugin-dialog");
@@ -21,19 +23,28 @@ export function RepositorySection({
   repo,
   onRepoChange,
   onPathChange,
+  demo,
 }: {
   workspaceId: string;
   isOwner: boolean;
   repo: Repository | null;
-  onRepoChange: () => void;
+  /** no modo demonstração recebe o remoto escolhido, já que nada é gravado no servidor */
+  onRepoChange: (remote?: { owner: string; name: string }) => void;
   onPathChange: () => void;
+  /** demonstração no navegador (?demo): pasta e git simulados */
+  demo?: boolean;
 }) {
   const [path, setPath] = useState(() => repoPath(workspaceId));
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // ao abrir os Ajustes, mostra a branch atual da cópia já escolhida
+  useEffect(() => {
+    if (!path || (!inTauri && !demo)) return;
+    (demo ? Promise.resolve(DEMO_STATUS) : gitStatus(path)).then(setStatus, () => setStatus(null));
+  }, [path, demo]);
 
-  if (!inTauri) return <p className="text-[10.5px] text-muted">A pasta do projeto se escolhe no app desktop.</p>;
+  if (!inTauri && !demo) return <p className="text-[10.5px] text-muted">A pasta do projeto se escolhe no app desktop.</p>;
 
   const savePath = (p: string | null) => {
     setRepoPath(workspaceId, p);
@@ -45,12 +56,14 @@ export function RepositorySection({
     setErr(null);
     setBusy(true);
     try {
-      const dir = await pickFolder();
+      const dir = demo ? "C:/Users/voce/code/hacko" : await pickFolder();
       if (!dir) return;
-      const s = await gitStatus(dir);
+      const s = demo ? DEMO_STATUS : await gitStatus(dir);
       if (!s.remote) throw new Error("essa pasta não tem um remoto do GitHub (origin)");
       if (repo) {
         if (!sameRepo(repo, s)) throw new Error(`essa pasta é de github.com/${s.remote.owner}/${s.remote.name}, não do repositório do time`);
+      } else if (demo) {
+        onRepoChange(s.remote);
       } else {
         const { error } = await supabase.from("repositories").insert({ workspace_id: workspaceId, owner: s.remote.owner, name: s.remote.name });
         if (error) throw error;

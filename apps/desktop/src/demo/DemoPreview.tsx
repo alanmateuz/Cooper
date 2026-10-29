@@ -2,6 +2,10 @@
 // Pessoas e números fictícios para ver a aba Agora e a pílula com um time maior, sem tocar no Supabase.
 import type { AgentKind, AgentSession, Task, UsageView } from "@cooper/shared";
 import { useEffect, useMemo, useState } from "react";
+import { ClaudeHooks } from "../components/ClaudeHooks";
+import { SettingsSection } from "../components/OtherTabs";
+import { RepositorySection } from "../components/RepositorySection";
+import { setRepoPath, type Repository } from "../lib/repo";
 import { Pill } from "../components/Pill";
 import { TeamBoard } from "../components/TeamBoard";
 import { LogoMark } from "../components/ui";
@@ -124,6 +128,8 @@ export function DemoPreview() {
         <Pill people={shown} me={me} usageOf={(id) => usage[id] ?? []} alerts={0} awaiting={2} onExpand={() => {}} />
       </div>
 
+      <DemoSettings />
+
       <div
         key={size.label}
         className="relative flex shrink-0 resize flex-col overflow-hidden rounded-xl border border-line bg-bg shadow-2xl"
@@ -139,6 +145,53 @@ export function DemoPreview() {
           <TeamBoard people={shown} me={me} now={now} usageOf={(id) => usage[id] ?? []} />
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Ajustes → Repositório e Agentes → Status em tempo real, com pasta, git e hooks simulados. */
+function DemoSettings() {
+  const [owner, setOwner] = useState(true);
+  const [repo, setRepo] = useState<Repository | null>(null);
+  const ws = owner ? "demo-dono" : "demo-membro";
+  const btn = "rounded-md border border-line bg-panel px-2 py-1 text-[11px] hover:bg-raised";
+  return (
+    <div className="w-[360px] shrink-0 space-y-2 rounded-xl border border-line bg-bg p-3 shadow-2xl">
+      <div className="flex items-center gap-1.5 text-[11px]">
+        <b>Ajustes (demo)</b>
+        <span className="ml-auto text-muted">ver como</span>
+        {[true, false].map((o) => (
+          <button
+            key={String(o)}
+            type="button"
+            onClick={() => {
+              setOwner(o);
+              setRepoPath(o ? "demo-dono" : "demo-membro", null);
+              if (!o && !repo) setRepo({ id: "r", workspace_id: "w", owner: "alanmateuz", name: "hacko", default_branch: "main" });
+            }}
+            className={`${btn} ${owner === o ? "border-accent text-accent" : ""}`}
+          >
+            {o ? "dono" : "membro"}
+          </button>
+        ))}
+        <button type="button" onClick={() => (setRepo(null), setRepoPath("demo-dono", null), setRepoPath("demo-membro", null), setOwner(true))} className={btn}>
+          zerar
+        </button>
+      </div>
+      <SettingsSection title="Repositório">
+        <RepositorySection
+          key={`${ws}-${repo ? 1 : 0}`}
+          demo
+          workspaceId={ws}
+          isOwner={owner}
+          repo={repo}
+          onRepoChange={(r) => r && setRepo({ id: "r", workspace_id: "w", owner: r.owner, name: r.name, default_branch: "main" })}
+          onPathChange={() => {}}
+        />
+      </SettingsSection>
+      <SettingsSection title="Agentes">
+        <ClaudeHooks demo />
+      </SettingsSection>
     </div>
   );
 }
