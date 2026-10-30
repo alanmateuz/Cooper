@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto";
 import { AGENT_RULES, declineReasonSchema, progressTextSchema } from "@cooper/shared";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { skillMessage, skillsFrom } from "./skills";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { compact } from "./compact";
@@ -353,6 +354,23 @@ async function shutdown() {
 process.stdin.on("close", () => void shutdown());
 process.on("SIGINT", () => void shutdown());
 process.on("SIGTERM", () => void shutdown());
+
+// Skills do time (blocos "Skill: …") viram prompts. Lidas uma vez ao abrir; sem rede, segue sem elas.
+try {
+  const { data } = await Promise.race([
+    db.rpc("mcp_get_workspace_context", { p_token: env.token, p_session: session, p_blocks: null }),
+    new Promise<{ data: null }>((r) => setTimeout(() => r({ data: null }), 3000)),
+  ]);
+  for (const r of skillsFrom((data as { blocks?: { title: string; preview?: string }[] } | null)?.blocks ?? [])) {
+    server.registerPrompt(r.name, { title: r.title, description: r.preview || "Skill do time no Cooper" }, async () => {
+      const { data: d } = await db.rpc("mcp_get_workspace_context", { p_token: env.token, p_session: session, p_blocks: [r.title] });
+      const content = (d as { blocks?: { content: string }[] } | null)?.blocks?.[0]?.content ?? "(a skill foi apagada no Cooper)";
+      return { messages: [{ role: "user", content: { type: "text", text: skillMessage(r.title, content) } }] };
+    });
+  }
+} catch {
+  /* sem skills nesta sessão */
+}
 
 await server.connect(new StdioServerTransport());
 console.error(`[cooper-mcp] ${VERSION} pronto (sessão ${session.slice(0, 8)})`);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eventOf, shouldSend } from "./cooper-hook";
+import { agentOf, eventOf, shouldSend } from "./cooper-hook";
 
 describe("cooper-hook", () => {
   it("só o nome do evento sai do JSON", () => {
@@ -13,5 +13,9 @@ describe("cooper-hook", () => {
     expect(shouldSend("pre_tool_use", { event: "pre_tool_use", at: now - 25_000 }, now)).toBe(true);
     expect(shouldSend("pre_tool_use", { event: "stop", at: now }, now)).toBe(true);
     expect(shouldSend("stop", { event: "stop", at: now }, now)).toBe(true);
+  });
+  it("agente pelo argumento", () => {
+    expect(agentOf("codex")).toBe("codex");
+    expect(agentOf(undefined)).toBe("claude_code");
   });
 });

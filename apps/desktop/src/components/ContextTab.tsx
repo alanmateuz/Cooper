@@ -11,6 +11,7 @@ export function ContextTab({ data, me, now }: { data: WorkspaceData; me: string;
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [adding, setAdding] = useState<"new" | "paste" | null>(null);
   const blocks = data.context.filter((b) => !b.deleted_at);
+  const hasSkill = blocks.some((b) => /^\s*skill\s*:/i.test(b.title));
 
   // Botões fixos no topo: criar ou colar sem precisar rolar até o fim da lista.
   const btn = (on: boolean) =>
@@ -29,6 +30,11 @@ export function ContextTab({ data, me, now }: { data: WorkspaceData; me: string;
         {adding === "new" && <NewBlock workspaceId={data.workspace!.id} onDone={() => setAdding(null)} />}
         {adding === "paste" && <PasteContext data={data} onDone={() => setAdding(null)} />}
         <ContextSize data={data} />
+        {!hasSkill && blocks.length > 0 && (
+          <p className="px-1 text-[10.5px] leading-snug text-muted">
+            Dica: um bloco com título <b>Skill: nome</b> vira o comando <code>/mcp__cooper__nome</code> no Claude Code (em conversas novas).
+          </p>
+        )}
         <RecentChanges data={data} me={me} now={now} onShow={(id) => setOpen((o) => ({ ...o, [id]: true }))} />
         {blocks.length === 0 && !adding && (
           <p className="px-1 pt-6 pb-2 text-center leading-snug text-muted">Nenhum contexto ainda. Cole um texto (os títulos # viram blocos) ou crie um bloco.</p>

@@ -2,7 +2,7 @@
 // Pessoas e números fictícios para ver a aba Agora e a pílula com um time maior, sem tocar no Supabase.
 import type { AgentKind, AgentSession, Task, UsageView } from "@cooper/shared";
 import { useEffect, useMemo, useState } from "react";
-import { ClaudeHooks } from "../components/ClaudeHooks";
+import { AgentHooks } from "../components/AgentHooks";
 import { SettingsSection } from "../components/OtherTabs";
 import { RepositorySection } from "../components/RepositorySection";
 import { setRepoPath, type Repository } from "../lib/repo";
@@ -190,7 +190,7 @@ function DemoSettings() {
         />
       </SettingsSection>
       <SettingsSection title="Agentes">
-        <ClaudeHooks demo />
+        <AgentHooks demo />
       </SettingsSection>
     </div>
   );

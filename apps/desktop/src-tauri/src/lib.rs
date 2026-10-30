@@ -1,7 +1,7 @@
 mod agent_config;
 mod ai_usage;
 mod claude_limits;
-mod claude_hooks;
+mod agent_hooks;
 mod claude_statusline;
 mod downloads;
 mod git_repo;
@@ -61,9 +61,9 @@ pub fn run() {
             claude_statusline::preview_claude_statusline,
             claude_statusline::install_claude_statusline,
             claude_statusline::remove_claude_statusline,
-            claude_hooks::preview_claude_hooks,
-            claude_hooks::install_claude_hooks,
-            claude_hooks::remove_claude_hooks,
+            agent_hooks::preview_agent_hooks,
+            agent_hooks::install_agent_hooks,
+            agent_hooks::remove_agent_hooks,
             git_repo::git_repo_status,
             project_instructions::preview_agent_instructions,
             project_instructions::write_agent_instructions

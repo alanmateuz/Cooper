@@ -8,7 +8,7 @@ import { CRITICAL_USAGE_PCT } from "../lib/notifications";
 import type { ShareStatus } from "../lib/usage";
 import type { WorkspaceData } from "../lib/useWorkspace";
 import { AgentsSection } from "./AgentsSection";
-import { ClaudeHooks } from "./ClaudeHooks";
+import { AgentHooks } from "./AgentHooks";
 import { ProjectInstructions } from "./ProjectInstructions";
 import { playUi, setUiSounds, uiSoundsEnabled } from "../lib/sound";
 
@@ -92,7 +92,7 @@ export function SettingsTab({
       {children}
       <SettingsSection title="Agentes">
         <AgentsSection workspaceId={workspace.id} now={now} />
-        <ClaudeHooks />
+        <AgentHooks />
         <ProjectInstructions />
       </SettingsSection>
       {projects}

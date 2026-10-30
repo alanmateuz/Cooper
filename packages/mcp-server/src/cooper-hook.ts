@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Hook do Claude Code para o Cooper: avisa que o agente está trabalhando ("Executando").
-// O Claude Code passa um JSON do evento no stdin; daqui sai só o NOME do evento (pre_tool_use, stop…).
+// Hook do Claude Code e do Codex para o Cooper: avisa que o agente está trabalhando ("Executando").
+// O agente passa um JSON do evento no stdin (mesmo formato nos dois); daqui sai só o NOME do evento (pre_tool_use, stop…).
 // Prompt, ferramenta, arquivos e caminhos do JSON são descartados. A conexão (url, chave pública e token
-// do agente) vem de ~/.cooper/hook.json, gravado pelo app ao ligar os hooks.
-// Nunca atrapalha o Claude Code: qualquer erro é ignorado, sai sempre com código 0 e espera no máximo 2 s.
-// Referência: https://code.claude.com/docs/en/hooks (hook_event_name)
+// do agente) vem de ~/.cooper/hook-<agente>.json, gravado pelo app ao ligar os hooks; o agente vem no 1º argumento.
+// Nunca atrapalha o agente: qualquer erro é ignorado, sai sempre com código 0 e espera no máximo 2 s.
+// Referências: https://code.claude.com/docs/en/hooks e https://learn.chatgpt.com/docs/hooks (hook_event_name)
 import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -31,13 +31,19 @@ export function shouldSend(event: string, last: { event?: string; at?: number } 
   return event === "stop" || !last || last.event !== event || now - (last.at ?? 0) > THROTTLE_MS;
 }
 
+/** Agente do 1º argumento; sem argumento (versões antigas do hook), Claude Code. */
+export function agentOf(arg: string | undefined): "claude_code" | "codex" {
+  return arg === "codex" ? "codex" : "claude_code";
+}
+
 async function main() {
+  const agent = agentOf(process.argv[2]);
   const chunks: Buffer[] = [];
   for await (const c of process.stdin) chunks.push(c as Buffer);
   const event = eventOf(JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}"));
   if (!event) return;
 
-  const lastFile = join(cooperDir(), "hook-last.json");
+  const lastFile = join(cooperDir(), `hook-last-${agent}.json`);
   let last: { event?: string; at?: number } | null = null;
   try {
     last = JSON.parse(readFileSync(lastFile, "utf8"));
@@ -46,7 +52,7 @@ async function main() {
   }
   if (!shouldSend(event, last)) return;
 
-  const cfg = JSON.parse(readFileSync(join(cooperDir(), "hook.json"), "utf8")) as { url: string; anon: string; token: string };
+  const cfg = JSON.parse(readFileSync(join(cooperDir(), `hook-${agent}.json`), "utf8")) as { url: string; anon: string; token: string };
   await fetch(`${cfg.url}/rest/v1/rpc/mcp_hook_event`, {
     method: "POST",
     headers: { apikey: cfg.anon, Authorization: `Bearer ${cfg.anon}`, "Content-Type": "application/json" },

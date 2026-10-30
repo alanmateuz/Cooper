@@ -15,7 +15,7 @@ Pesquisa feita em 28/10/2026. **Nada implementado ainda**, como pedia o document
 
 ## Proposta (em ordem)
 
-1. **Receitas como prompts do MCP** (pequeno): um bloco de contexto marcado como "receita" vira um prompt do servidor `cooper` (`/mcp__cooper__deploy`). Funciona nos dois agentes que suportam prompts, sem escrever arquivos na máquina de ninguém.
+1. **Skills como prompts do MCP** — **feito (30/10/2026)**: um bloco de contexto com título `Skill: nome` vira o prompt `nome` do servidor `cooper` (no Claude Code, `/mcp__cooper__nome`), lido na hora do uso. Lista carregada quando o agente abre uma conversa. Falta confirmar se o Codex mostra prompts de servidores MCP.
 2. **Exportar receita como skill** (médio): ⚙ → "Instalar como skill" grava `SKILL.md` em `~/.claude/skills/<nome>/` e `~/.codex/skills/<nome>/`, com a mesma prévia + confirmação que já usamos para `CLAUDE.md`/`AGENTS.md`.
 3. **Não** construir um "marketplace" de skills: o ecossistema público já existe (agentskills.io e repositórios curados).
 
