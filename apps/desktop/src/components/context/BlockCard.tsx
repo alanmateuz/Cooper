@@ -1,4 +1,4 @@
-import type { ContextBlock } from "@cooper/shared";
+import { skillCommand, type ContextBlock } from "@cooper/shared";
 import { useState } from "react";
 import { contextApi } from "../../lib/api";
 import { friendlyError } from "../../lib/errors";
@@ -13,6 +13,7 @@ import { useFlash } from "../../lib/motion";
 export function BlockCard({ block, data, now, open, setOpen }: { block: ContextBlock; data: WorkspaceData; now: Date; open: boolean; setOpen: (v: boolean) => void }) {
   const [mode, setMode] = useState<"view" | "edit" | "history">("view");
   const flash = useFlash(block.version);
+  const command = skillCommand(block.title);
   const [err, setErr] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -38,7 +39,14 @@ export function BlockCard({ block, data, now, open, setOpen }: { block: ContextB
           <Icon name="chevron" size={10} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium">{block.title}</span>
+          <span className="flex items-baseline gap-1.5">
+            <span className="min-w-0 truncate font-medium">{block.title}</span>
+            {command && (
+              <code className="shrink-0 rounded bg-accent/15 px-1 text-[10px] text-accent" title="Skill: a IA do time segue este passo a passo com este comando, no Claude Code">
+                {command}
+              </code>
+            )}
+          </span>
           <span className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted" title={new Date(block.updated_at).toLocaleString("pt-BR")}>
             <span className="truncate">
               {who(data, block.updated_by, block.updated_agent)} · {timeAgo(block.updated_at, now)} · v{block.version}

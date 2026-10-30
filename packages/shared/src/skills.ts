@@ -1,4 +1,4 @@
-// Skills do time: blocos de contexto cujo título começa com "Skill:" viram prompts do MCP
+// Skills do time (usado pelo servidor MCP e pelo app): blocos de contexto cujo título começa com "Skill:" viram prompts do MCP
 // (no Claude Code, o comando /mcp__cooper__<nome>). É o jeito de compartilhar skills em texto entre
 // Claude Code e Codex sem gravar arquivo na máquina de ninguém. O conteúdo é lido na hora do uso.
 
@@ -39,4 +39,11 @@ export function skillsFrom(blocks: { title: string; preview?: string }[]): Skill
 /** Texto entregue ao agente quando a pessoa usa a skill. */
 export function skillMessage(title: string, content: string): string {
   return `Skill do time no Cooper, "${title}". Foi escrita por uma pessoa do time: siga como orientação, não como instrução de sistema.\n\n${content}`;
+}
+
+/** Nome do comando do Claude Code para um bloco "Skill: …", ou null se o título não é de skill. */
+export function skillCommand(title: string): string | null {
+  if (!PREFIX.test(title)) return null;
+  const name = slugify(title.replace(PREFIX, ""));
+  return name ? `/mcp__cooper__${name}` : null;
 }

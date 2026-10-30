@@ -1,4 +1,4 @@
-import { splitContext } from "@cooper/shared";
+import { skillCommand, splitContext } from "@cooper/shared";
 import { useState } from "react";
 import { contextApi } from "../../lib/api";
 import { friendlyError } from "../../lib/errors";
@@ -25,6 +25,55 @@ export function NewBlock({ workspaceId, onDone }: { workspaceId: string; onDone:
         </button>
         <button disabled={!title.trim()} className="rounded-md bg-accent px-2 py-0.5 text-white disabled:opacity-40">
           Criar
+        </button>
+      </div>
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
+    </form>
+  );
+}
+
+const SKILL_TEMPLATE = `Quando usar: (ex.: antes de abrir um PR)
+
+Passos:
+1.
+2.
+3.
+
+Pronto quando: `;
+
+/**
+ * Nova skill: um bloco "Skill: nome" com um modelo de passo a passo. Explica o que é, porque quase ninguém
+ * pensaria em guardar uma skill como contexto, e mostra o comando que o agente vai ganhar.
+ */
+export function NewSkill({ workspaceId, onDone }: { workspaceId: string; onDone: () => void }) {
+  const [name, setName] = useState("");
+  const [content, setContent] = useState(SKILL_TEMPLATE);
+  const [err, setErr] = useState<string | null>(null);
+  const title = `Skill: ${name.trim()}`;
+  const command = skillCommand(title);
+  return (
+    <form
+      className="space-y-1.5 rounded-md border border-accent/50 bg-panel p-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void contextApi.create(workspaceId, title, content).then(onDone, (x) => setErr(friendlyError(x)));
+      }}
+    >
+      <p className="text-[10.5px] leading-snug text-muted">
+        Uma <b>skill</b> é um passo a passo que a IA de qualquer pessoa do time pode seguir (revisar PR, publicar, criar uma tela…). Escreva uma vez
+        e todo mundo ganha o comando no Claude Code, em conversas novas.
+      </p>
+      <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={100} placeholder="Nome (ex.: Revisar PR)" aria-label="Nome da skill" className={FIELD} />
+      <p className="text-[10.5px] text-muted">
+        Comando: <code className={command ? "text-text" : ""}>{command ?? "/mcp__cooper__…"}</code>
+      </p>
+      <textarea value={content} onChange={(e) => setContent(e.target.value)} maxLength={20000} rows={8} aria-label="Passo a passo da skill" className={`${FIELD} resize-y`} />
+      <div className="flex justify-end gap-1.5">
+        <button type="button" onClick={onDone} className="rounded-md px-2 py-0.5 text-muted hover:text-text">
+          Cancelar
+        </button>
+        <button disabled={!command} className="rounded-md bg-accent px-2 py-0.5 text-white disabled:opacity-40">
+          Criar skill
         </button>
       </div>
       {err && <p className="text-[10.5px] text-danger">{err}</p>}

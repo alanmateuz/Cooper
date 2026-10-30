@@ -3,10 +3,9 @@
 // Toda chamada vai para uma RPC no Supabase que valida o token e restringe ao workspace dele.
 // stdout é do protocolo MCP: logs só em stderr.
 import { randomUUID } from "node:crypto";
-import { AGENT_RULES, declineReasonSchema, progressTextSchema } from "@cooper/shared";
+import { AGENT_RULES, declineReasonSchema, progressTextSchema, skillMessage, skillsFrom } from "@cooper/shared";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { skillMessage, skillsFrom } from "./skills";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { compact } from "./compact";

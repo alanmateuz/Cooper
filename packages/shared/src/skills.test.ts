@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { skillsFrom, slugify } from "./skills";
+import { skillCommand, skillsFrom, slugify } from "./skills";
 
 describe("skills", () => {
   it("só blocos com Skill: no título, com nome de comando limpo", () => {
@@ -15,5 +15,10 @@ describe("skills", () => {
   });
   it("slug sem acento nem símbolos", () => {
     expect(slugify("  Checklist de Lançamento!! ")).toBe("checklist-de-lancamento");
+  });
+  it("comando do Claude Code a partir do título", () => {
+    expect(skillCommand("Skill: Revisar PR")).toBe("/mcp__cooper__revisar-pr");
+    expect(skillCommand("Arquitetura")).toBeNull();
+    expect(skillCommand("Skill:   ")).toBeNull();
   });
 });

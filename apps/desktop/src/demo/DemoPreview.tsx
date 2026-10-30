@@ -3,6 +3,7 @@
 import type { AgentKind, AgentSession, Task, UsageView } from "@cooper/shared";
 import { useEffect, useMemo, useState } from "react";
 import { AgentHooks } from "../components/AgentHooks";
+import { NewSkill } from "../components/context/NewBlock";
 import { SettingsSection } from "../components/OtherTabs";
 import { RepositorySection } from "../components/RepositorySection";
 import { setRepoPath, type Repository } from "../lib/repo";
@@ -191,6 +192,9 @@ function DemoSettings() {
       </SettingsSection>
       <SettingsSection title="Agentes">
         <AgentHooks demo />
+      </SettingsSection>
+      <SettingsSection title="Contexto → Nova skill (só visual)">
+        <NewSkill workspaceId="demo" onDone={() => {}} />
       </SettingsSection>
     </div>
   );

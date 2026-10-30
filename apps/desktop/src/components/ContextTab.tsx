@@ -2,16 +2,15 @@ import { useState } from "react";
 import type { WorkspaceData } from "../lib/useWorkspace";
 import { BlockCard } from "./context/BlockCard";
 import { ContextSize } from "./context/ContextSize";
-import { NewBlock, PasteContext } from "./context/NewBlock";
+import { NewBlock, NewSkill, PasteContext } from "./context/NewBlock";
 import { RecentChanges } from "./context/RecentChanges";
 import { Icon } from "./ui";
 
-/** Aba Contexto: blocos livres, edição inline, colar texto grande, histórico por bloco e "desfazer". */
+/** Aba Contexto: blocos livres, skills (blocos "Skill: …"), edição inline, colar texto grande, histórico por bloco e "desfazer". */
 export function ContextTab({ data, me, now }: { data: WorkspaceData; me: string; now: Date }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
-  const [adding, setAdding] = useState<"new" | "paste" | null>(null);
+  const [adding, setAdding] = useState<"new" | "skill" | "paste" | null>(null);
   const blocks = data.context.filter((b) => !b.deleted_at);
-  const hasSkill = blocks.some((b) => /^\s*skill\s*:/i.test(b.title));
 
   // Botões fixos no topo: criar ou colar sem precisar rolar até o fim da lista.
   const btn = (on: boolean) =>
@@ -22,22 +21,27 @@ export function ContextTab({ data, me, now }: { data: WorkspaceData; me: string;
         <button type="button" aria-pressed={adding === "new"} onClick={() => setAdding(adding === "new" ? null : "new")} className={btn(adding === "new")}>
           <Icon name="plus" size={11} /> Novo bloco
         </button>
+        <button
+          type="button"
+          aria-pressed={adding === "skill"}
+          onClick={() => setAdding(adding === "skill" ? null : "skill")}
+          className={btn(adding === "skill")}
+          title="Um passo a passo que a IA de qualquer pessoa do time pode seguir por um comando"
+        >
+          <Icon name="plus" size={11} /> Nova skill
+        </button>
         <button type="button" aria-pressed={adding === "paste"} onClick={() => setAdding(adding === "paste" ? null : "paste")} className={btn(adding === "paste")}>
           <Icon name="list" size={11} /> Colar contexto
         </button>
       </div>
       <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-2.5">
         {adding === "new" && <NewBlock workspaceId={data.workspace!.id} onDone={() => setAdding(null)} />}
+        {adding === "skill" && <NewSkill workspaceId={data.workspace!.id} onDone={() => setAdding(null)} />}
         {adding === "paste" && <PasteContext data={data} onDone={() => setAdding(null)} />}
         <ContextSize data={data} />
-        {!hasSkill && blocks.length > 0 && (
-          <p className="px-1 text-[10.5px] leading-snug text-muted">
-            Dica: um bloco com título <b>Skill: nome</b> vira o comando <code>/mcp__cooper__nome</code> no Claude Code (em conversas novas).
-          </p>
-        )}
         <RecentChanges data={data} me={me} now={now} onShow={(id) => setOpen((o) => ({ ...o, [id]: true }))} />
         {blocks.length === 0 && !adding && (
-          <p className="px-1 pt-6 pb-2 text-center leading-snug text-muted">Nenhum contexto ainda. Cole um texto (os títulos # viram blocos) ou crie um bloco.</p>
+          <p className="px-1 pt-6 pb-2 text-center leading-snug text-muted">Nenhum contexto ainda. Cole um texto (os títulos # viram blocos), crie um bloco ou uma skill (um passo a passo que a IA do time segue).</p>
         )}
         {blocks.map((b) => (
           <BlockCard key={b.id} block={b} data={data} now={now} open={open[b.id] ?? false} setOpen={(v) => setOpen((o) => ({ ...o, [b.id]: v }))} />
