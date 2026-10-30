@@ -8,11 +8,15 @@
   <img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20Code%20%7C%20Codex-c77bf9">
   <img alt="Stack" src="https://img.shields.io/badge/Tauri%202%20%C2%B7%20React%2019%20%C2%B7%20Supabase-1a1b20">
   <a href="LICENSE"><img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-lightgrey"></a>
+  <a href="#feito-com-agentes-de-ia"><img alt="Feito com agentes de IA" src="https://img.shields.io/badge/feito%20com-agentes%20de%20IA-8b5cf6"></a>
 </p>
 
 O Cooper coordena o trabalho de times que programam com agentes de IA (Claude Code e Codex). As pessoas acompanham o
 time num painel de mesa sempre visível, e os agentes de cada uma se conectam ao Cooper por MCP: leem as mesmas tarefas e o
 mesmo contexto do projeto, informam o que estão fazendo e consultam o que os agentes dos colegas estão fazendo.
+
+> **Feito com agentes de IA.** O código do Cooper foi escrito com o Claude Code, sob a direção de Alan Mateus Queiroz.
+> Detalhes em [Feito com agentes de IA](#feito-com-agentes-de-ia).
 
 <p align="center">
   <img src="docs/assets/screenshot-agora.png" alt="Aba Agora: um cartão por pessoa com tarefa, agente e limites de IA" width="560">
@@ -279,6 +283,19 @@ pnpm db:seed          # usuários e dados de exemplo (senhas em .env.local)
 Mais documentos: [o que é o Cooper](docs/O_QUE_E_O_COOPER.md) · [contexto para agentes](docs/CONTEXTO_COOPER.md) ·
 [criar o servidor](docs/SETUP_SUPABASE.md) · [e-mail](docs/EMAIL.md) · [skills](docs/SKILLS.md) ·
 [pesquisa de plataformas](docs/PESQUISA_PLATAFORMAS.md) · [histórico das fases](docs/historico/).
+
+## Feito com agentes de IA
+
+O Cooper foi construído do jeito que ele propõe que os times trabalhem: com agentes de IA.
+
+- **Quem escreveu o código:** o [Claude Code](https://claude.com/claude-code) (modelo Claude, da Anthropic). Todos os
+  commits deste repositório trazem o Claude como coautor (`Co-Authored-By: Claude`).
+- **Papel da pessoa:** Alan Mateus Queiroz definiu o produto, tomou as decisões de design, pediu cada mudança, testou o
+  app e decidiu o que entrava em cada versão.
+- **Como garantimos a qualidade:** testes automáticos de banco (RLS, migrações e funções, num Postgres em memória), do
+  servidor MCP e do app rodam em todo push (CI), e cada versão foi usada de verdade com Claude Code e Codex.
+- **O próprio Cooper no processo:** a versão 0.8.1 nasceu de um teste de ponta a ponta em que um agente usou o Cooper
+  para planejar, executar, revisar e entregar um projeto de exemplo, com PR e merge no GitHub.
 
 ## Licença
 

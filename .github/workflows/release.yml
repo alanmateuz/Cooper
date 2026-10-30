@@ -35,5 +35,7 @@ jobs:
           releaseBody: |
             Instalador para Windows: `Cooper_*_x64-setup.exe`.
             Primeira vez? Veja docs/SETUP_SUPABASE.md para criar o servidor do time.
+
+            Feito com agentes de IA: o código do Cooper foi escrito com o Claude Code, sob a direção de Alan Mateus Queiroz.
           releaseDraft: true
           prerelease: false
