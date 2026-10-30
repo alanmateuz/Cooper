@@ -45,8 +45,17 @@ export const taskEventPayloadSchema = z
     version: z.number().int().positive().optional(),
     action: z.enum(["create", "update", "restore", "delete"]).optional(),
     // task_deleted: a tarefa não existe mais, então o evento guarda número e título
+    // dependency_done: número e título da dependência concluída
     number: z.number().int().positive().optional(),
     title: z.string().max(200).optional(),
+    /** dependency_done: era a última dependência aberta (a tarefa ficou liberada) */
+    all_done: z.boolean().optional(),
+    /** availability_changed */
+    status: z.enum(["available", "busy", "near_limit", "away"]).optional(),
+    note: z.string().max(120).optional(),
+    /** pr_update (GitHub): número do PR e o que mudou */
+    pr: z.number().int().positive().optional(),
+    change: z.enum(["opened", "checks_failure", "checks_success", "approved", "changes_requested", "merged", "closed"]).optional(),
   })
   .strict();
 export type TaskEventPayload = z.infer<typeof taskEventPayloadSchema>;

@@ -147,7 +147,15 @@ export function TaskPanel({ task, data, me, now, onClose, onOpenTask }: { task: 
               <Block title="Vínculos">
                 {links.map((l) => (
                   <div key={l.id} className="flex items-center gap-1.5">
-                    <span className="text-muted">{l.kind}</span> <span className="truncate">{l.ref}</span> <SourceBadge source={l.source} />
+                    <span className="text-muted">{l.kind}</span>{" "}
+                    {l.url ? (
+                      <a href={l.url} target="_blank" rel="noreferrer" className="truncate text-accent hover:underline">
+                        {l.ref}
+                      </a>
+                    ) : (
+                      <span className="truncate">{l.ref}</span>
+                    )}{" "}
+                    <SourceBadge source={l.source} />
                   </div>
                 ))}
               </Block>

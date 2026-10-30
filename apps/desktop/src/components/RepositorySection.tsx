@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { friendlyError } from "../lib/errors";
+import { githubToken, setGithubToken, syncGithub } from "../lib/github";
 import { gitStatus, repoPath, sameRepo, setRepoPath, type GitStatus, type Repository } from "../lib/repo";
 import { supabase } from "../lib/supabase";
 import { inTauri } from "../lib/window";
@@ -26,6 +27,7 @@ export function RepositorySection({
   onRepoChange,
   onPathChange,
   demo,
+  repoAccess,
   humanReview,
   onHumanReview,
 }: {
@@ -37,6 +39,8 @@ export function RepositorySection({
   onPathChange: () => void;
   /** demonstração no navegador (?demo): pasta e git simulados */
   demo?: boolean;
+  /** acesso desta pessoa ao repositório, lido do GitHub (undefined: servidor sem o esquema 20) */
+  repoAccess?: "write" | "read" | "none" | null;
   /** revisão humana do projeto; undefined = servidor sem o esquema 18 */
   humanReview?: boolean;
   onHumanReview?: (on: boolean) => Promise<void>;
@@ -133,6 +137,7 @@ export function RepositorySection({
         )
       )}
       {err && <p className="text-[10.5px] text-danger">{err}</p>}
+      {repo && <GithubAccess workspaceId={workspaceId} repo={repo} access={repoAccess} demo={demo} onSaved={onPathChange} />}
       {humanReview !== undefined && <HumanReview on={humanReview} isOwner={isOwner} repo={repo} onChange={onHumanReview} />}
     </div>
   );
@@ -180,6 +185,110 @@ function HumanReview({ on, isOwner, repo, onChange }: { on: boolean; isOwner: bo
       )}
       {on && <p className="text-[10.5px] leading-snug text-muted">O bloqueio de PR precisa do "Status em tempo real" ligado em ⚙ → Agentes.</p>}
       {err && <p className="text-[10.5px] text-danger">{err}</p>}
+    </div>
+  );
+}
+
+const ACCESS_LABEL = { write: "escrita", read: "só leitura (push vai falhar)", none: "sem acesso" } as const;
+
+/**
+ * GitHub: token opcional (só nesta máquina) para ler PRs de repositório privado e saber o acesso de escrita.
+ * Sem token, o app lê só repositório público. O que o app lê vai para o time: PRs, CI, revisão e o seu acesso.
+ */
+function GithubAccess({
+  workspaceId,
+  repo,
+  access,
+  demo,
+  onSaved,
+}: {
+  workspaceId: string;
+  repo: Repository;
+  access?: "write" | "read" | "none" | null;
+  demo?: boolean;
+  onSaved: () => void;
+}) {
+  const [hasToken, setHasToken] = useState(() => !!githubToken());
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function check(token: string | null) {
+    setBusy(true);
+    setMsg(null);
+    try {
+      if (demo) {
+        setMsg({ ok: true, text: "2 PRs lidos · acesso: escrita" });
+        return;
+      }
+      const r = await syncGithub(workspaceId, repo, token);
+      setMsg({ ok: true, text: `${r.pulls} ${r.pulls === 1 ? "PR lido" : "PRs lidos"}${r.access ? ` · acesso: ${ACCESS_LABEL[r.access]}` : ""}` });
+    } catch (e) {
+      setMsg({ ok: false, text: friendlyError(e) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const btn = "rounded-md border border-line px-2 py-0.5 hover:bg-raised disabled:opacity-40";
+  return (
+    <div className="space-y-1 border-t border-line pt-2">
+      <div className="flex items-center gap-1.5">
+        <BrandIcon brand="github" size={13} />
+        <span className="font-medium">PRs e CI</span>
+        {access && <span className={`ml-auto text-[10.5px] ${access === "write" ? "text-muted" : "text-warn"}`}>seu acesso: {ACCESS_LABEL[access]}</span>}
+      </div>
+      {hasToken ? (
+        <div className="flex items-center justify-end gap-1.5">
+          <span className="mr-auto text-[10.5px] text-muted">Token do GitHub salvo nesta máquina</span>
+          <button type="button" onClick={() => (setGithubToken(null), setHasToken(false), onSaved())} className="rounded-md px-2 py-0.5 text-muted hover:text-text">
+            Remover
+          </button>
+          <button type="button" disabled={busy} onClick={() => void check(githubToken())} className={btn}>
+            {busy ? "Lendo…" : "Ler agora"}
+          </button>
+        </div>
+      ) : (
+        <form
+          className="flex gap-1.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setGithubToken(draft);
+            setHasToken(true);
+            setDraft("");
+            onSaved();
+            void check(draft.trim());
+          }}
+        >
+          <input
+            type="password"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Token do GitHub (opcional)"
+            aria-label="Token do GitHub"
+            autoComplete="off"
+            className="min-w-0 flex-1 rounded-md border border-line bg-raised px-2 py-0.5 outline-none focus:border-accent"
+          />
+          <button disabled={!draft.trim()} className={btn}>
+            Salvar
+          </button>
+        </form>
+      )}
+      {!hasToken && (
+        <p className="text-[10.5px] leading-snug text-muted">
+          Sem token, só repositório público.{" "}
+          <a
+            href="https://github.com/settings/personal-access-tokens/new"
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent hover:underline"
+            title="Fine-grained, só este repositório: Pull requests, Commit statuses e Checks em leitura"
+          >
+            Criar token
+          </a>
+        </p>
+      )}
+      {msg && <p className={`text-[10.5px] ${msg.ok ? "text-muted" : "text-danger"}`}>{msg.text}</p>}
     </div>
   );
 }

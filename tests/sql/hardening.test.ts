@@ -41,7 +41,7 @@ beforeEach(setup);
 describe("versão do esquema", () => {
   it("cooper_server_info responde para anon", async () => {
     const r = await asAgent(db, (tx) => one(tx.query<{ r: unknown }>("select public.cooper_server_info() as r")));
-    expect(r.r).toEqual({ app: "cooper", schema: 18 });
+    expect(r.r).toEqual({ app: "cooper", schema: 20 });
   });
 });
 
@@ -160,9 +160,12 @@ describe("MCP compacto", () => {
       tx.query("insert into public.tasks (workspace_id, title, assignee_id, created_by) values ($1, 'Nova', $2, $3)", [ws, member.id, owner.id]),
     );
     const b = await call<Record<string, unknown>>("mcp_get_briefing", [token, SESSION]);
-    expect(Object.keys(b).sort()).toEqual(["awaiting_acceptance", "team"]);
+    expect(Object.keys(b).sort()).toEqual(["awaiting_acceptance", "since_last", "team"]);
+    expect(b.since_last).toEqual([expect.stringMatching(/^Dono criou para você #1 Nova \(há \d+ min\)$/)]);
     expect(b.awaiting_acceptance).toEqual([{ number: 1, title: "Nova", from: "Dono", has_prompt: false }]);
     expect(b.team).toEqual([{ name: "Dono" }]);
+    // o segundo briefing só traz o que mudou desde o primeiro
+    expect(await call<Record<string, unknown>>("mcp_get_briefing", [token, SESSION])).not.toHaveProperty("since_last");
   });
 
   it("get_task_context: resumo do projeto só quando pedido; sem nulos", async () => {

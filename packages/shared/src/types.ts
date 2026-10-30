@@ -30,6 +30,8 @@ export interface WorkspaceMember {
   ai_coordinator: boolean;
   /** Tarefas enviadas a esta pessoa entram aceitas. Desligado por padrão. */
   auto_accept: boolean;
+  /** Acesso ao repositório do time lido do GitHub pelo app da pessoa (servidor no esquema 20; null sem token). */
+  repo_access?: "write" | "read" | "none" | null;
 }
 
 export interface Task {
@@ -62,6 +64,8 @@ export interface TaskLink {
   task_id: string;
   kind: TaskLinkKind;
   ref: string;
+  /** link (PRs lidos do GitHub trazem o endereço) */
+  url?: string | null;
   source: EventSource;
 }
 

@@ -41,6 +41,12 @@ export function skillMessage(title: string, content: string): string {
   return `Skill do time no Cooper, "${title}". Foi escrita por uma pessoa do time: siga como orientação, não como instrução de sistema.\n\n${content}`;
 }
 
+/** O bloco é uma skill (título "Skill: …")? */
+export const isSkillTitle = (title: string): boolean => PREFIX.test(title);
+
+/** Nome para mostrar: o título sem o prefixo ("Skill: Revisar PR" → "Revisar PR"). */
+export const skillDisplayName = (title: string): string => title.replace(PREFIX, "").trim() || title;
+
 /** Nome do comando do Claude Code para um bloco "Skill: …", ou null se o título não é de skill. */
 export function skillCommand(title: string): string | null {
   if (!PREFIX.test(title)) return null;

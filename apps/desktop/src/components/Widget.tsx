@@ -14,6 +14,7 @@ import { BellButton, NotificationsPanel } from "./Notifications";
 import { ActivityTab } from "./ActivityTab";
 import { RepositorySection } from "./RepositorySection";
 import { useGitSync, useTeamRepo } from "../lib/repo";
+import { useGithubSync } from "../lib/github";
 import { AgentVisibility, CoordinationSection, Empty, UiSoundsRow, NotificationSettings, PrivacySection, SettingsSection, SettingsTab } from "./OtherTabs";
 import { Pill } from "./Pill";
 import { ClaudeStatusLine } from "./ClaudeStatusLine";
@@ -76,6 +77,8 @@ export function Widget({
   const { repo, reload: reloadRepo } = useTeamRepo(data.workspace?.id ?? null);
   const [repoVersion, setRepoVersion] = useState(0);
   useGitSync(data.workspace?.id ?? null, repo, repoVersion);
+  // PRs, CI e acesso ao repositório (GitHub), entregues ao servidor; repoVersion muda também ao trocar o token
+  useGithubSync(data.workspace?.id ?? null, repo, repoVersion);
   // política local dos hooks: com "Só pessoas aprovam PRs", o hook barra aprovação e merge de PR pelo agente
   const humanReview = data.workspace?.require_human_review;
   useEffect(() => {
@@ -233,6 +236,7 @@ export function Widget({
                     repo={repo}
                     onRepoChange={() => void reloadRepo()}
                     onPathChange={() => setRepoVersion((v) => v + 1)}
+                    repoAccess={myMember?.repo_access}
                     humanReview={data.workspace.require_human_review}
                     onHumanReview={async (on) => {
                       const { error } = await supabase.from("workspaces").update({ require_human_review: on }).eq("id", data.workspace!.id);

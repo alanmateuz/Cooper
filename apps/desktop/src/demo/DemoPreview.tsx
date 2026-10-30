@@ -8,6 +8,9 @@ import { SettingsSection } from "../components/OtherTabs";
 import { RepositorySection } from "../components/RepositorySection";
 import { setRepoPath, type Repository } from "../lib/repo";
 import { Pill } from "../components/Pill";
+import { ActivityTab } from "../components/ActivityTab";
+import { ContextTab } from "../components/ContextTab";
+import type { WorkspaceData } from "../lib/useWorkspace";
 import { TeamBoard } from "../components/TeamBoard";
 import { LogoMark } from "../components/ui";
 import type { PersonView } from "../lib/people";
@@ -160,6 +163,8 @@ export function DemoPreview() {
 
       <DemoSettings />
 
+      <DemoContentTabs now={now} />
+
       <div
         key={size.label}
         className="relative flex shrink-0 resize flex-col overflow-hidden rounded-xl border border-line bg-bg shadow-2xl"
@@ -223,6 +228,7 @@ function DemoSettings({ filled }: { filled?: boolean }) {
           repo={repo}
           onRepoChange={(r) => r && setRepo({ id: "r", workspace_id: "w", owner: r.owner, name: r.name, default_branch: "main" })}
           onPathChange={() => {}}
+          repoAccess={repo ? "write" : null}
           humanReview={review}
           onHumanReview={async (on) => setReview(on)}
         />
@@ -235,4 +241,94 @@ function DemoSettings({ filled }: { filled?: boolean }) {
       </SettingsSection>
     </div>
   );
+}
+
+/** Abas Contexto e Atividade com um projeto fictício parecido com uma rodada real de duas IAs (só visual). */
+function DemoContentTabs({ now }: { now: Date }) {
+  const [tab, setTab] = useState<"context" | "activity">("context");
+  const data = useMemo(() => demoWorkspace(now), [now]);
+  const btn = "rounded-md border border-line bg-panel px-2 py-1 text-[11px] hover:bg-raised";
+  return (
+    <div className="flex h-[640px] w-[360px] shrink-0 flex-col overflow-hidden rounded-xl border border-line bg-bg shadow-2xl">
+      <header className="flex h-10 shrink-0 items-center gap-1.5 border-b border-line px-3">
+        <b className="mr-auto">Conteúdo (demo)</b>
+        {(["context", "activity"] as const).map((t) => (
+          <button key={t} type="button" onClick={() => setTab(t)} className={`${btn} ${tab === t ? "border-accent text-accent" : ""}`}>
+            {t === "context" ? "Contexto" : "Atividade"}
+          </button>
+        ))}
+      </header>
+      <div className="min-h-0 flex-1">
+        {tab === "context" ? <ContextTab data={data} me="u-alan" now={now} /> : <ActivityTab data={data} now={now} onOpenTask={() => {}} />}
+      </div>
+    </div>
+  );
+}
+
+function demoWorkspace(now: Date): WorkspaceData {
+  const ago = (min: number) => new Date(now.getTime() - min * MIN).toISOString();
+  const member = (id: string, name: string, color: string) =>
+    ({ workspace_id: "demo", user_id: id, role: "member", profile: { id, display_name: name, avatar_color: color } }) as unknown as WorkspaceData["members"][number];
+  const task = (n: number, title: string, status: string, assignee: string) =>
+    ({ id: `t${n}`, workspace_id: "demo", number: n, title, status, assignee_id: assignee }) as unknown as WorkspaceData["tasks"][number];
+  const session = (id: string, user: string, agent: AgentKind) =>
+    ({ id, workspace_id: "demo", user_id: user, agent_kind: agent, client_session_id: id, has_hooks: false, current_task_id: null,
+       activity_text: null, started_at: ago(120), last_event_at: ago(1), last_event_type: "report_progress", ended_at: null }) as AgentSession;
+  let n = 0;
+  const ev = (min: number, user: string, sessionId: string | null, taskId: string | null, type: string, payload: Record<string, unknown>) =>
+    ({ id: `e${++n}`, workspace_id: "demo", task_id: taskId, user_id: user, agent_session_id: sessionId,
+       source: sessionId ? "agent_declared" : "user", type, occurred_at: ago(min), payload }) as WorkspaceData["events"][number];
+  // eventos lidos do GitHub pelo app: sem pessoa nem sessão
+  const github = (min: number, taskId: string, payload: Record<string, unknown>) =>
+    ({ id: `e${++n}`, workspace_id: "demo", task_id: taskId, user_id: null, agent_session_id: null,
+       source: "github", type: "pr_update", occurred_at: ago(min), payload }) as WorkspaceData["events"][number];
+  const block = (id: string, title: string, content: string, min: number, by: string) =>
+    ({ id, workspace_id: "demo", title, content, position: 0, version: 2, updated_by: by, updated_source: "agent_declared",
+       updated_agent: "claude_code", updated_at: ago(min), created_at: ago(200), deleted_at: null }) as WorkspaceData["context"][number];
+
+  const longSummary =
+    "Branch integracao junta o banco do Ian (#1) e a interface (#2), com os achados da revisão (#3) aplicados: atalhos ignoram repetição e modificadores, foco vai para o enunciado. Quiz testado com o banco real e publicado como Artifact. PR #1 aberto para main, que agora é a branch padrão.";
+  return {
+    workspace: null,
+    members: [member("u-alan", "Alan", "#6366f1"), member("u-ian", "Ian", "#14b8a6")],
+    tasks: [
+      task(1, "Banco de perguntas + validador", "done", "u-ian"),
+      task(2, "Interface web do Quiz", "done", "u-alan"),
+      task(3, "Revisão de código do front", "done", "u-ian"),
+      task(4, "Integrar banco real e publicar", "in_progress", "u-alan"),
+    ],
+    sessions: [session("s-alan", "u-alan", "claude_code"), session("s-ian", "u-ian", "claude_code")],
+    snapshots: [],
+    links: [],
+    usage: [],
+    events: [
+      github(1, "t4", { pr: 1, change: "merged", title: "Integração do quiz" }),
+      ev(2, "u-alan", "s-alan", "t4", "complete_task", { summary: longSummary }),
+      github(6, "t4", { pr: 1, change: "approved", title: "Integração do quiz" }),
+      github(8, "t4", { pr: 1, change: "checks_success", title: "Integração do quiz" }),
+      github(11, "t4", { pr: 1, change: "checks_failure", title: "Integração do quiz" }),
+      github(12, "t4", { pr: 1, change: "opened", title: "Integração do quiz" }),
+      ev(9, "u-alan", "s-alan", "t4", "report_progress", { text: "Artifact publicado e link no bloco Visão. PR aguardando o Alan abrir" }),
+      ev(14, "u-alan", "s-alan", "t4", "report_progress", { text: "integracao: merge #1+#2, achados da #3 aplicados, validador OK" }),
+      ev(16, "u-alan", "s-alan", "t4", "start_task", { branch: "integracao" }),
+      ev(18, "u-alan", "s-alan", null, "context_updated", { action: "update", block_title: "Decisões", version: 5 }),
+      ev(30, "u-ian", "s-ian", "t4", "dependency_done", { number: 3, title: "Revisão de código do front", all_done: true }),
+      ev(30, "u-ian", "s-ian", "t3", "complete_task", { summary: "2 achados: atalhos sem filtro de repetição; foco na 1ª opção." }),
+      ev(34, "u-ian", "s-ian", "t3", "report_progress", { text: "Revisando alan/interface@837e957: JSON, timer, teclado" }),
+      ev(40, "u-ian", "s-ian", null, "availability_changed", { status: "near_limit", note: "cota acaba em 20 min" }),
+      ev(52, "u-alan", "s-alan", "t4", "report_progress", { text: "LIBERA #3: alan/interface no GitHub @837e957" }),
+      ev(55, "u-ian", "s-ian", "t1", "report_progress", { text: "LIBERA #2: sample.json e questions.json no push, ian/banco-perguntas@5673798" }),
+      ev(70, "u-ian", "s-ian", "t1", "task_blocked", { reason: "push negado (403), ianeusantiago sem acesso de escrita ao repo" }),
+      ev(74, "u-alan", "s-alan", "t4", "report_progress", { text: "AGUARDANDO #1 (banco real) e #3 (revisão do front)" }),
+      ev(75, "u-alan", "s-alan", "t4", "report_progress", { text: "HANDOFF #4 → Ian: ver bloco Handoffs" }),
+      ev(90, "u-alan", "s-alan", null, "context_updated", { action: "create", block_title: "Skill: Revisar PR", version: 1 }),
+    ],
+    context: [
+      block("b1", "Visão do projeto: Quiz Relâmpago", "Demo de duas IAs trabalhando juntas via Cooper. Um quiz web estático: 10 perguntas sorteadas, 15 s por pergunta.", 20, "u-alan"),
+      block("b2", "Contrato de dados", "Arquivo data/questions.json. Raiz: { version, questions[] }. Cada pergunta: id, category, difficulty, prompt, options (4), answerIndex, explanation.", 120, "u-alan"),
+      block("b3", "Decisões", "- Projeto sem build; JS puro.\n- Branches novas a partir de main.", 18, "u-alan"),
+      block("b4", "Skill: Revisar PR", "Quando usar: antes de pedir merge.\n\nPassos:\n1. Rodar os testes.\n2. Ler o diff procurando bugs.\n3. Comentar os achados no PR.\n\nPronto quando: todos os achados respondidos.", 90, "u-alan"),
+      block("b5", "Skill: Publicar o quiz", "Passos:\n1. Validar o banco.\n2. Gerar a página.\n3. Publicar e registrar o link no Cooper.", 95, "u-ian"),
+    ],
+  } as WorkspaceData;
 }

@@ -42,6 +42,7 @@ problemas apareceram com frequência:
 | Contexto do projeto em blocos versionados (Resumo, Arquitetura, Convenções…) | Leitura apenas dos blocos necessários, edição de trechos com `patch_context_block` e resumo com `summarize_context` |
 | **Skills do time**: um bloco `Skill: nome` vira um passo a passo que qualquer IA do time segue | No Claude Code, o comando `/mcp__cooper__nome` |
 | Modo coordenador (opcional, por pessoa): a IA vê a carga e o limite de cada um e redistribui o trabalho | `get_team_workload`, `assign_task`, `update_task` |
+| **Coordenação entre agentes**: dependências entre tarefas, aviso quando a dependência termina, bloqueios, disponibilidade e limite de tarefas abertas por pessoa | `create_task` com `depends_on`, `set_dependencies`, `set_blocked`, `set_availability`, `handoff_task`; o `get_briefing` traz as novidades desde o último (`since_last`) |
 | **Só pessoas aprovam PRs** (opcional, por projeto) | O hook barra `gh pr merge` e `gh pr review --approve`; tarefas param em *Em revisão* |
 | Linha do tempo com a origem de cada informação | Tudo o que o agente registra aparece como `declarado` |
 
@@ -183,7 +184,9 @@ conflito, que precisa ser resolvido antes de salvar.
 | Repositório do time e branch/alterações locais (`git local`), escolhidos pelo app | ✅ |
 | Status "Executando" por hooks (Claude Code e Codex) | ✅ |
 | Só pessoas aprovam PRs (hook + proteção de branch do GitHub) | ✅ |
-| Integração com a API do GitHub (PRs e CI no painel) | ⏳ |
+| Dependências com aviso, novidades no briefing, bloqueio, handoff, disponibilidade e limite de tarefas (0.8) | ✅ |
+| Limite de tarefas abertas em ⚙ Ajustes (hoje só pela função `set_wip_limit`) | ⏳ |
+| Integração com o GitHub: PRs, CI e revisão ligados à tarefa pela branch, acesso de escrita de cada um, commits das evidências conferidos no git local | ✅ |
 | Alerta quando dois agentes alteram os mesmos arquivos | ⏳ |
 | Atualização automática do app | ⏳ |
 | Envio do convite por e-mail pelo próprio Cooper | ⏳ |

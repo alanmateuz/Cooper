@@ -9,6 +9,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { compact } from "./compact";
+import { commitWarnings, gitIn } from "./evidence";
 
 /** Versão do package.json, injetada pelo build (build.mjs). */
 declare const __COOPER_VERSION__: string;
@@ -35,7 +36,14 @@ type Result = { content: { type: "text"; text: string }[]; isError?: boolean };
 
 async function rpc(fn: string, args: Record<string, unknown> = {}): Promise<Result> {
   const { data, error } = await db.rpc(fn, { p_token: env.token, p_session: session, ...args });
-  if (error) return { content: [{ type: "text", text: `Erro do Cooper: ${error.message}` }], isError: true };
+  if (error) {
+    // PGRST202: o servidor do time ainda não tem esta função (esquema antigo)
+    const text =
+      error.code === "PGRST202"
+        ? `Esta ferramenta precisa do servidor do Cooper atualizado. Peça ao dono do time para rodar o SQL de supabase/upgrades/ (versão ${VERSION}).`
+        : `Erro do Cooper: ${error.message}`;
+    return { content: [{ type: "text", text }], isError: true };
+  }
   // Conflito de versão no contexto: nada foi gravado; a resposta traz o conteúdo atual para mesclar.
   const conflict = !!data && typeof data === "object" && (data as { conflict?: unknown }).conflict === true;
   return { content: [{ type: "text", text: JSON.stringify(compact(data ?? { ok: true })) }], ...(conflict ? { isError: true } : {}) };
@@ -97,7 +105,8 @@ server.registerTool(
   "get_briefing",
   {
     title: "Briefing",
-    description: "Numa chamada: tarefas aguardando seu aceite, suas tarefas abertas, as que você enviou e foram recusadas, e o que cada pessoa do time está fazendo (agente, tarefa, branch, arquivos não commitados).",
+    description:
+      "Numa chamada: novidades desde o último briefing (since_last), tarefas aguardando aceite, as suas (bloqueio, espera), recusadas e o que cada pessoa do time está fazendo.",
     inputSchema: {},
   },
   () => rpc("mcp_get_briefing"),
@@ -123,7 +132,7 @@ server.registerTool(
   "get_task_context",
   {
     title: "Contexto da tarefa",
-    description: "Prompt, quem enviou, descrição, critérios, vínculos, dependências e progresso recente de uma tarefa.",
+    description: "Prompt, quem enviou, critérios, vínculos, dependências (e quem depende dela), bloqueio, conclusão (resumo e evidências) e progresso recente.",
     inputSchema: {
       task_number: taskNumber,
       summary: z.boolean().optional().describe("Incluir o bloco de resumo do projeto"),
@@ -170,15 +179,77 @@ server.registerTool(
   "create_task",
   {
     title: "Criar tarefa",
-    description: "Cria uma tarefa. Para outra pessoa, fica aguardando aceite; para o próprio usuário (padrão), já nasce aceita.",
+    description:
+      "Cria uma tarefa. Para outra pessoa, fica aguardando aceite; para o próprio usuário (padrão), já nasce aceita. depends_on: tarefas que precisam terminar antes.",
     inputSchema: {
       title: z.string().trim().min(1).max(200),
       prompt: z.string().max(20000).optional().describe("O que a IA de quem receber deve executar"),
       assigned_to: z.string().max(200).optional().describe("Nome ou e-mail de um membro. Omitido: o próprio usuário"),
+      depends_on: z.array(z.number().int().positive()).max(20).optional().describe("Números das tarefas que precisam terminar antes"),
     },
   },
-  ({ title, prompt, assigned_to }) =>
-    rpc("mcp_create_task", { p_title: title, p_prompt: prompt ?? null, p_assignee: assigned_to ?? null }),
+  ({ title, prompt, assigned_to, depends_on }) =>
+    // sem depends_on, não manda o parâmetro: assim funciona também em servidor no esquema 18
+    rpc("mcp_create_task", {
+      p_title: title,
+      p_prompt: prompt ?? null,
+      p_assignee: assigned_to ?? null,
+      ...(depends_on?.length ? { p_depends_on: depends_on } : {}),
+    }),
+);
+
+server.registerTool(
+  "set_dependencies",
+  {
+    title: "Dependências da tarefa",
+    description: "Troca a lista de tarefas que precisam terminar antes desta. Quando todas terminam, quem tem a tarefa é avisado no briefing. Lista vazia remove.",
+    inputSchema: {
+      task_number: taskNumber,
+      depends_on: z.array(z.number().int().positive()).max(20).describe("Números das tarefas; [] remove todas"),
+    },
+  },
+  ({ task_number, depends_on }) => rpc("mcp_set_dependencies", { p_number: task_number, p_depends_on: depends_on }),
+);
+
+server.registerTool(
+  "set_blocked",
+  {
+    title: "Marcar bloqueio",
+    description: "Marca a tarefa como bloqueada com o motivo (acesso, ambiente, decisão pendente). Sem reason, desbloqueia. O time vê no briefing.",
+    inputSchema: {
+      task_number: taskNumber,
+      reason: z.string().trim().max(300).optional().describe("O que impede; omitido: desbloqueia"),
+    },
+  },
+  ({ task_number, reason }) => rpc("mcp_set_blocked", { p_number: task_number, p_reason: reason || null }),
+);
+
+server.registerTool(
+  "handoff_task",
+  {
+    title: "Passar tarefa adiante",
+    description:
+      "Passa a tarefa para outra pessoa com uma nota (branch@commit, feito, falta, cuidados). Commite antes. Quem recebe aceita, salvo aceite automático.",
+    inputSchema: {
+      task_number: taskNumber,
+      to: z.string().min(1).max(200).describe("Nome ou e-mail de quem recebe"),
+      note: z.string().trim().min(1).max(1900).describe("Estado da tarefa para quem continua"),
+    },
+  },
+  ({ task_number, to, note }) => rpc("mcp_handoff_task", { p_number: task_number, p_to: to, p_note: note }),
+);
+
+server.registerTool(
+  "set_availability",
+  {
+    title: "Disponibilidade",
+    description: "Avisa o time se você pode pegar trabalho: available, busy, near_limit (cota ou contexto acabando) ou away. Vale por 12 h.",
+    inputSchema: {
+      status: z.enum(["available", "busy", "near_limit", "away"]),
+      note: z.string().trim().max(120).optional().describe("Ex.: 'cota acaba em 20 min'"),
+    },
+  },
+  ({ status, note }) => rpc("mcp_set_availability", { p_status: status, p_note: note || null }),
 );
 
 server.registerTool(
@@ -338,8 +409,12 @@ server.registerTool(
       evidence: z.array(z.string().min(1).max(300)).max(10).optional(),
     },
   },
-  ({ summary, task_number, evidence }) =>
-    rpc("mcp_complete_task", { p_summary: summary, p_number: task_number ?? null, p_evidence: evidence ?? null }),
+  async ({ summary, task_number, evidence }) => {
+    const r = await rpc("mcp_complete_task", { p_summary: summary, p_number: task_number ?? null, p_evidence: evidence ?? null });
+    if (r.isError) return r;
+    const warnings = await commitWarnings(evidence, gitIn(process.cwd()));
+    return warnings.length ? { content: [...r.content, { type: "text", text: `Atenção (git local): ${warnings.join("; ")}.` }] } : r;
+  },
 );
 
 // Encerra a sessão no Cooper quando o cliente fecha o processo (melhor esforço).

@@ -1,4 +1,4 @@
-import { skillCommand, type ContextBlock } from "@cooper/shared";
+import { skillCommand, skillDisplayName, type ContextBlock } from "@cooper/shared";
 import { useState } from "react";
 import { contextApi } from "../../lib/api";
 import { friendlyError } from "../../lib/errors";
@@ -39,14 +39,12 @@ export function BlockCard({ block, data, now, open, setOpen }: { block: ContextB
           <Icon name="chevron" size={10} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="flex items-baseline gap-1.5">
-            <span className="min-w-0 truncate font-medium">{block.title}</span>
-            {command && (
-              <code className="shrink-0 rounded bg-accent/15 px-1 text-[10px] text-accent" title="Skill: a IA do time segue este passo a passo com este comando, no Claude Code">
-                {command}
-              </code>
-            )}
-          </span>
+          <span className="block truncate font-medium">{command ? skillDisplayName(block.title) : block.title}</span>
+          {command && (
+            <code className="mt-0.5 block truncate text-[10px] text-accent" title="Comando que a IA do time ganha no Claude Code (conversa nova)">
+              {command}
+            </code>
+          )}
           <span className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted" title={new Date(block.updated_at).toLocaleString("pt-BR")}>
             <span className="truncate">
               {who(data, block.updated_by, block.updated_agent)} · {timeAgo(block.updated_at, now)} · v{block.version}
@@ -60,6 +58,11 @@ export function BlockCard({ block, data, now, open, setOpen }: { block: ContextB
         <div className="space-y-2 px-3 pb-3 pl-[30px]">
           {mode === "view" && (
             <>
+              {command && (
+                <p className="rounded-md bg-raised px-2 py-1 text-[10.5px] leading-snug text-muted">
+                  Para usar: numa conversa nova do Claude Code, digite <code className="text-text">{command}</code>. A IA segue os passos abaixo.
+                </p>
+              )}
               <p className="leading-relaxed whitespace-pre-wrap select-text">{block.content || "(vazio)"}</p>
               <div className="flex gap-2 text-[10.5px]">
                 <button type="button" onClick={() => setMode("edit")} className="text-accent hover:underline">

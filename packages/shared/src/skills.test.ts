@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { skillCommand, skillsFrom, slugify } from "./skills";
+import { isSkillTitle, skillCommand, skillDisplayName, skillsFrom, slugify } from "./skills";
 
 describe("skills", () => {
   it("só blocos com Skill: no título, com nome de comando limpo", () => {
@@ -20,5 +20,11 @@ describe("skills", () => {
     expect(skillCommand("Skill: Revisar PR")).toBe("/mcp__cooper__revisar-pr");
     expect(skillCommand("Arquitetura")).toBeNull();
     expect(skillCommand("Skill:   ")).toBeNull();
+  });
+  it("separa skill de contexto e tira o prefixo para mostrar", () => {
+    expect(isSkillTitle("skill: deploy")).toBe(true);
+    expect(isSkillTitle("Skills do time")).toBe(false);
+    expect(skillDisplayName("Skill:  Revisar PR")).toBe("Revisar PR");
+    expect(skillDisplayName("Skill:")).toBe("Skill:");
   });
 });

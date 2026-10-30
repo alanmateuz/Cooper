@@ -28,7 +28,7 @@ describe("migrações", () => {
   it("aplicam do zero, em ordem", async () => {
     const db = await freshDb();
     const r = await db.query<{ info: { app: string; schema: number } }>("select public.cooper_server_info() as info");
-    expect(r.rows[0]!.info).toEqual({ app: "cooper", schema: 18 });
+    expect(r.rows[0]!.info).toEqual({ app: "cooper", schema: 20 });
   });
 
   it("install.sql está em dia com as migrações", () => {
@@ -42,19 +42,38 @@ describe("migrações", () => {
     expect(viaInstall).toEqual(viaMigrations);
   });
 
-  it("supabase/upgrades/13-para-16.sql e 16-para-18.sql levam um servidor no esquema 13 ao mesmo esquema de uma instalação nova", async () => {
+  it("supabase/upgrades/13-para-16.sql, 16-para-18.sql, 18-para-19.sql e 19-para-20.sql levam um servidor no esquema 13 ao mesmo esquema de uma instalação nova", async () => {
     const upTo13 = migrationFiles().filter((f) => f < "20261028000014").map((f) => readFileSync(join(MIGRATIONS_DIR, f), "utf8"));
     const upgrade = readFileSync(join(MIGRATIONS_DIR, "..", "upgrades", "13-para-16.sql"), "utf8");
     const db = await freshDb({ sql: upTo13.join("\n;\n") });
     await db.exec(upgrade);
     await db.exec(readFileSync(join(MIGRATIONS_DIR, "..", "upgrades", "16-para-18.sql"), "utf8"));
+    await db.exec(readFileSync(join(MIGRATIONS_DIR, "..", "upgrades", "18-para-19.sql"), "utf8"));
+    await db.exec(readFileSync(join(MIGRATIONS_DIR, "..", "upgrades", "19-para-20.sql"), "utf8"));
     expect(await schemaSignature(db)).toEqual(await schemaSignature(await freshDb()));
   });
 
-  it("supabase/upgrades/17-para-18.sql leva um servidor no esquema 17 ao mesmo esquema de uma instalação nova", async () => {
+  it("supabase/upgrades/17-para-18.sql, 18-para-19.sql e 19-para-20.sql levam um servidor no esquema 17 ao mesmo esquema de uma instalação nova", async () => {
     const upTo17 = migrationFiles().filter((f) => f < "20261030000018").map((f) => readFileSync(join(MIGRATIONS_DIR, f), "utf8"));
     const db = await freshDb({ sql: upTo17.join("\n;\n") });
     await db.exec(readFileSync(join(MIGRATIONS_DIR, "..", "upgrades", "17-para-18.sql"), "utf8"));
+    await db.exec(readFileSync(join(MIGRATIONS_DIR, "..", "upgrades", "18-para-19.sql"), "utf8"));
+    await db.exec(readFileSync(join(MIGRATIONS_DIR, "..", "upgrades", "19-para-20.sql"), "utf8"));
+    expect(await schemaSignature(db)).toEqual(await schemaSignature(await freshDb()));
+  });
+
+  it("supabase/upgrades/18-para-19.sql e 19-para-20.sql levam um servidor no esquema 18 ao mesmo esquema de uma instalação nova", async () => {
+    const upTo18 = migrationFiles().filter((f) => f < "20261030000019").map((f) => readFileSync(join(MIGRATIONS_DIR, f), "utf8"));
+    const db = await freshDb({ sql: upTo18.join("\n;\n") });
+    await db.exec(readFileSync(join(MIGRATIONS_DIR, "..", "upgrades", "18-para-19.sql"), "utf8"));
+    await db.exec(readFileSync(join(MIGRATIONS_DIR, "..", "upgrades", "19-para-20.sql"), "utf8"));
+    expect(await schemaSignature(db)).toEqual(await schemaSignature(await freshDb()));
+  });
+
+  it("supabase/upgrades/19-para-20.sql leva um servidor no esquema 19 ao mesmo esquema de uma instalação nova", async () => {
+    const upTo19 = migrationFiles().filter((f) => f < "20261030000020").map((f) => readFileSync(join(MIGRATIONS_DIR, f), "utf8"));
+    const db = await freshDb({ sql: upTo19.join("\n;\n") });
+    await db.exec(readFileSync(join(MIGRATIONS_DIR, "..", "upgrades", "19-para-20.sql"), "utf8"));
     expect(await schemaSignature(db)).toEqual(await schemaSignature(await freshDb()));
   });
 });
