@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <a href="../../releases"><img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.6.0-8b5cf6"></a>
-  <a href="https://github.com/alanmateuz/cooper/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/alanmateuz/cooper/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="../../releases"><img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.7.0-8b5cf6"></a>
+  <a href="https://github.com/alanmateuz/Cooper/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/alanmateuz/Cooper/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20Code%20%7C%20Codex-c77bf9">
   <img alt="Stack" src="https://img.shields.io/badge/Tauri%202%20%C2%B7%20React%2019%20%C2%B7%20Supabase-1a1b20">
   <a href="LICENSE"><img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-lightgrey"></a>
@@ -37,8 +37,12 @@ problemas apareceram com frequência:
 | Para as pessoas | Para os agentes (via MCP) |
 |---|---|
 | Painel com quem está online, com qual agente, em qual tarefa e o último progresso | `get_briefing` traz, numa chamada, as tarefas pendentes, as próprias e o que cada colega está fazendo |
-| Tarefas com prompt, ou seja, o que a IA de quem recebe deve fazer. Quem recebe aceita ou recusa com motivo | `get_task_context`, `start_task`, `report_progress` e `complete_task` com evidências |
-| Contexto do projeto em blocos versionados (Resumo, Arquitetura, Convenções…) | Leitura apenas dos blocos necessários e edição de trechos com `patch_context_block` |
+| Tarefas com prompt, ou seja, o que a IA de quem recebe deve fazer. Quem recebe aceita ou recusa com motivo (ou liga o aceite automático) | `get_task_context`, `start_task`, `report_progress` e `complete_task` com evidências |
+| Subtarefas, comentários, anexos, prioridade e prazo | `create_subtask`, `add_task_comment`, `get_task_discussion`, `plan_task` |
+| Contexto do projeto em blocos versionados (Resumo, Arquitetura, Convenções…) | Leitura apenas dos blocos necessários, edição de trechos com `patch_context_block` e resumo com `summarize_context` |
+| **Skills do time**: um bloco `Skill: nome` vira um passo a passo que qualquer IA do time segue | No Claude Code, o comando `/mcp__cooper__nome` |
+| Modo coordenador (opcional, por pessoa): a IA vê a carga e o limite de cada um e redistribui o trabalho | `get_team_workload`, `assign_task`, `update_task` |
+| **Só pessoas aprovam PRs** (opcional, por projeto) | O hook barra `gh pr merge` e `gh pr review --approve`; tarefas param em *Em revisão* |
 | Linha do tempo com a origem de cada informação | Tudo o que o agente registra aparece como `declarado` |
 
 O Cooper não programa e não substitui os agentes. Ele cuida da coordenação entre eles e entre as pessoas.
@@ -98,7 +102,7 @@ O painel do Bruno é atualizado em tempo real a cada um desses passos.
 | Agora | Atividade | Agentes |
 |---|---|---|
 | <img src="docs/assets/screenshot-agora.png" alt="Aba Agora" width="260"> | <img src="docs/assets/screenshot-atividade.png" alt="Linha do tempo com tarefas aceitas e iniciadas" width="260"> | <img src="docs/assets/screenshot-agentes.png" alt="Ajustes: uso de IA e token dos agentes" width="260"> |
-| Um cartão por pessoa: presença, agente, tarefa, último progresso e uso de IA do dia | Linha do tempo do time, com quem aceitou, iniciou ou moveu cada tarefa | Token por agente para o MCP e controle do que o uso de IA compartilha com o time |
+| Visão **Equipe** (lista com a folga de IA de cada um) ou **Pessoas** (um cartão por pessoa, com a tarefa na cor dela) | Linha do tempo do time, com quem aceitou, iniciou ou moveu cada tarefa | Token por agente para o MCP e controle do que o uso de IA compartilha com o time |
 
 <p align="center">
   <img src="docs/assets/screenshot-compacto.png" alt="Modo compacto: a pessoa, a tarefa e o uso" width="420"><br>
@@ -129,7 +133,7 @@ O painel distingue o que foi declarado pelo agente do que foi observado:
 | `git local` / `GitHub` | Lido do repositório ou da API do GitHub. |
 | `usuário` | Ação feita por uma pessoa no painel. |
 
-O status "Executando" só aparece com evento recente de hook. Ao concluir uma tarefa, o agente envia evidências, como o
+O status "Executando" só aparece com evento recente de hook, que se liga em Ajustes → Agentes. Ao concluir uma tarefa, o agente envia evidências, como o
 commit e o comando de teste executado.
 
 ### Controle humano
@@ -138,6 +142,9 @@ commit e o comando de teste executado.
 - O prompt de uma tarefa é tratado como descrição de trabalho e não como instrução de sistema, já que foi escrito por
   outra pessoa. Isso reduz o risco de *prompt injection* entre membros do time.
 - Alterar o prompt de uma tarefa já aceita exige um novo aceite.
+- Com **Só pessoas aprovam PRs** ligado, o agente não aprova nem faz merge de PR (o hook bloqueia) e não conclui tarefas:
+  elas param em *Em revisão* até uma pessoa aprovar.
+- O modo coordenador e o aceite automático vêm desligados; cada pessoa liga para si.
 - A gravação do trecho do Cooper no `CLAUDE.md`/`AGENTS.md` de um repositório mostra antes o que será alterado em cada
   arquivo e só acontece após confirmação.
 
@@ -169,10 +176,17 @@ conflito, que precisa ser resolvido antes de salvar.
 | Contas, projetos, convites e código de conexão | ✅ |
 | Uso de IA e limites (opcional) | ✅ |
 | Instalador para Windows | ✅ |
-| Branch e alterações locais (`git local`) | ⏳ |
-| Integração com GitHub (pushes, PRs, CI) | ⏳ |
-| Status "Executando" por hooks e alerta quando dois agentes alteram os mesmos arquivos | ⏳ |
-| Resumos diários gerados por IA | ⏳ |
+| Subtarefas, comentários, anexos, prioridade e prazo | ✅ |
+| Modo coordenador e aceite automático | ✅ |
+| Resumo do contexto, com medida de quanto encolheu | ✅ |
+| Skills do time como contexto (comandos no Claude Code) | ✅ |
+| Repositório do time e branch/alterações locais (`git local`), escolhidos pelo app | ✅ |
+| Status "Executando" por hooks (Claude Code e Codex) | ✅ |
+| Só pessoas aprovam PRs (hook + proteção de branch do GitHub) | ✅ |
+| Integração com a API do GitHub (PRs e CI no painel) | ⏳ |
+| Alerta quando dois agentes alteram os mesmos arquivos | ⏳ |
+| Atualização automática do app | ⏳ |
+| Envio do convite por e-mail pelo próprio Cooper | ⏳ |
 
 ## Começar
 
@@ -193,7 +207,22 @@ conflito, que precisa ser resolvido antes de salvar.
    `~/.codex/config.toml`), com backup. Nenhum arquivo dos seus repositórios é alterado.
 3. Abra uma conversa nova no agente e peça: *"use o cooper: o que tenho para fazer?"*
 
+### 3. Uma vez por pessoa, em Ajustes (opcional)
+
+- **Repositório**: o dono escolhe a pasta do projeto, e o repositório do GitHub dela vira o do time. Os outros apontam onde
+  está a própria cópia. O time passa a ver branch e quantos arquivos cada um alterou (nunca nomes nem conteúdo).
+- **Agentes → Status em tempo real**: liga os hooks do Claude Code e do Codex, com prévia e backup. O hook manda só o nome
+  do evento. No Codex, aprove uma vez com `/hooks`.
+
+### Atualizar o servidor
+
+Quando uma versão nova muda o banco, o dono do time cola o arquivo de [`supabase/upgrades/`](supabase/upgrades/) que leva
+da versão atual à nova (por exemplo `17-para-18.sql`) no **SQL Editor** do Supabase e clica em **Run**. É uma vez por time.
+Quem instala do zero usa só o `supabase/install.sql`.
+
 Requisito: Node.js 20 ou superior (o servidor MCP roda com `node`).
+
+> Para os e-mails de confirmação chegarem a qualquer pessoa, configure um SMTP próprio no Supabase: [docs/EMAIL.md](docs/EMAIL.md).
 
 > No Supabase, mantenha **"Confirm email"** ativado. O convite para um projeto é validado pelo e-mail da conta; sem
 > confirmação, alguém poderia criar uma conta com o e-mail de outra pessoa e aceitar o convite.
@@ -204,7 +233,7 @@ Requisito: Node.js 20 ou superior (o servidor MCP roda com `node`).
 apps/desktop          app de mesa (Tauri v2 + React 19 + Tailwind 4); leitura local de uso de IA em Rust
 packages/mcp-server   servidor MCP (stdio) usado pelos agentes
 packages/shared       tipos, esquemas Zod e regras de presença, uso e agentes
-supabase/migrations   esquema, RLS e RPCs; supabase/install.sql reúne tudo
+supabase/migrations   esquema, RLS e RPCs; supabase/install.sql reúne tudo; supabase/upgrades, de uma versão à outra
 tests/sql             testes de SQL num Postgres em memória (PGlite)
 tests/*.test.ts       testes de ponta a ponta contra um Supabase de testes
 ```
@@ -216,7 +245,7 @@ Pré-requisitos: Node 24, pnpm, Rust (MSVC), Visual Studio Build Tools com C++ e
 
 ```bash
 pnpm install
-pnpm dev:web       # só a interface, no navegador (http://localhost:1420)
+pnpm dev:web       # só a interface, no navegador (http://localhost:1420; /?demo mostra um time fictício)
 pnpm dev:desktop   # app Tauri
 pnpm tauri build   # instalador (em apps/desktop)
 ```
@@ -244,7 +273,8 @@ pnpm db:seed          # usuários e dados de exemplo (senhas em .env.local)
 </details>
 
 Mais documentos: [o que é o Cooper](docs/O_QUE_E_O_COOPER.md) · [contexto para agentes](docs/CONTEXTO_COOPER.md) ·
-[criar o servidor](docs/SETUP_SUPABASE.md) · [histórico das fases](docs/historico/).
+[criar o servidor](docs/SETUP_SUPABASE.md) · [e-mail](docs/EMAIL.md) · [skills](docs/SKILLS.md) ·
+[pesquisa de plataformas](docs/PESQUISA_PLATAFORMAS.md) · [histórico das fases](docs/historico/).
 
 ## Licença
 
