@@ -15,7 +15,7 @@ time num painel de mesa sempre visível, e os agentes de cada uma se conectam ao
 mesmo contexto do projeto, informam o que estão fazendo e consultam o que os agentes dos colegas estão fazendo.
 
 <p align="center">
-  <img src="docs/assets/screenshot-agora.png" alt="Aba Agora: um cartão por pessoa com tarefa, agente e limites de IA" width="720">
+  <img src="docs/assets/screenshot-agora.png" alt="Aba Agora: um cartão por pessoa com tarefa, agente e limites de IA" width="560">
 </p>
 
 ---
