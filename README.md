@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases"><img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.7.0-8b5cf6"></a>
+  <a href="../../releases"><img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.8.1-8b5cf6"></a>
   <a href="https://github.com/alanmateuz/Cooper/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/alanmateuz/Cooper/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="MCP" src="https://img.shields.io/badge/MCP-Claude%20Code%20%7C%20Codex-c77bf9">
   <img alt="Stack" src="https://img.shields.io/badge/Tauri%202%20%C2%B7%20React%2019%20%C2%B7%20Supabase-1a1b20">
@@ -187,6 +187,7 @@ conflito, que precisa ser resolvido antes de salvar.
 | Dependências com aviso, novidades no briefing, bloqueio, handoff, disponibilidade e limite de tarefas (0.8) | ✅ |
 | Limite de tarefas abertas em ⚙ Ajustes (hoje só pela função `set_wip_limit`) | ⏳ |
 | Integração com o GitHub: PRs, CI e revisão ligados à tarefa pela branch, acesso de escrita de cada um, commits das evidências conferidos no git local | ✅ |
+| Um aviso por PR no briefing, PR também na tarefa-mãe e projeto novo com os blocos Decisões e Handoffs (0.8.1) | ✅ |
 | Alerta quando dois agentes alteram os mesmos arquivos | ⏳ |
 | Atualização automática do app | ⏳ |
 | Envio do convite por e-mail pelo próprio Cooper | ⏳ |

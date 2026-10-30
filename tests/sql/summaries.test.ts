@@ -28,7 +28,10 @@ describe("resumo do contexto", () => {
     const s = await agent("mcp_summarize_context", [null]);
     expect(s.instructions).toMatch(/40%/);
     expect(s.blocks[0]).toMatchObject({ title: "Arquitetura", version: 1, chars: LONG.length });
-    expect(s.total_chars).toBe(LONG.length + 2);
+    // os blocos padrão do projeto (Decisões, Handoffs) também entram na soma
+    const padrao = await one(db.query<{ n: number }>(
+      "select sum(char_length(content))::int as n from public.context_blocks where workspace_id = $1 and title in ('Decisões', 'Handoffs')", [ws]));
+    expect(s.total_chars).toBe(LONG.length + 2 + padrao.n);
 
     const r = await agent("mcp_save_context_summary", ["Arquitetura", "- D1 + Drizzle", 1]);
     expect(r).toMatchObject({ ok: true, version: 2, chars_before: LONG.length, chars_after: 14 });

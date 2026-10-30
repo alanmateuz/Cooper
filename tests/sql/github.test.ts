@@ -95,6 +95,50 @@ describe("github_sync", () => {
   });
 });
 
+describe("0.8.1: tarefa-mãe, avisos agrupados e blocos padrão", () => {
+  it("subtarefas na mesma branch: a mãe recebe o PR e o briefing traz uma linha por mudança", async () => {
+    const mae = await agent(tokAlan, "mcp_create_task", ["Dashboard", null, null]);
+    const a = await agent(tokAlan, "mcp_create_subtask", [mae.number, "Dados", null, null]);
+    const b = await agent(tokAlan, "mcp_create_subtask", [mae.number, "Tela", null, null]);
+    await agent(tokAlan, "mcp_start_task", [a.number, "alan/dashboard"]);
+    await agent(tokAlan, "mcp_start_task", [b.number, "alan/dashboard"]);
+    await agent(tokAlan, "mcp_get_briefing");
+
+    const dash = (over: Record<string, unknown> = {}) =>
+      pr({ number: 2, head_branch: "alan/dashboard", base_branch: "integracao", url: "https://github.com/alanmateuz/Projeto-exemplo/pull/2", ...over });
+    await sync(alan, [dash()]);
+    await sync(alan, [dash({ state: "merged" })]);
+
+    const ctx = await agent(tokAlan, "mcp_get_task_context", [mae.number, false]);
+    expect(ctx.links).toEqual(["branch: alan/dashboard"]);
+    expect(ctx.pull_requests).toEqual(["#2 alan/dashboard → integracao · merge feito · CI rodando · revisão pendente · https://github.com/alanmateuz/Projeto-exemplo/pull/2"]);
+
+    const lines: string[] = (await agent(tokAlan, "mcp_get_briefing")).since_last;
+    const tarefas = `#${mae.number}, #${a.number}, #${b.number}`;
+    expect(lines.filter((l) => l.startsWith("GitHub PR #2"))).toEqual([
+      expect.stringMatching(new RegExp(`^GitHub PR #2 \\(${tarefas}\\): merge feito \\(`)),
+      expect.stringMatching(new RegExp(`^GitHub PR #2 \\(${tarefas}\\): aberto \\(`)),
+    ]);
+    // a linha do tempo de cada tarefa continua com o próprio evento
+    expect(await prEvents()).toHaveLength(6);
+  });
+
+  it("PR de uma tarefa só mantém o título no aviso", async () => {
+    const n = await taskOnBranch();
+    await agent(tokAlan, "mcp_get_briefing");
+    await sync(alan, [pr()]);
+    expect((await agent(tokAlan, "mcp_get_briefing")).since_last).toEqual([expect.stringMatching(new RegExp(`^GitHub PR #1 \\(#${n} Integrar\\): aberto`))]);
+  });
+
+  it("projeto novo já tem os blocos Decisões e Handoffs", async () => {
+    const r = await db.query<{ title: string }>("select title from public.context_blocks where workspace_id = $1 order by position", [ws]);
+    expect(r.rows.map((x) => x.title)).toEqual(["Decisões", "Handoffs"]);
+    await agent(tokAlan, "mcp_patch_context_block", ["Decisões", "- 30/10 (#3): tema automático", null, null]);
+    const d = await one(db.query<{ content: string }>("select content from public.context_blocks where workspace_id = $1 and title = 'Decisões'", [ws]));
+    expect(d.content).toMatch(/tema automático$/);
+  });
+});
+
 describe("agentes", () => {
   it("briefing: PRs abertos, eventos do GitHub e quem não tem acesso de escrita", async () => {
     await taskOnBranch();

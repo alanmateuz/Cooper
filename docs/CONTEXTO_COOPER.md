@@ -31,7 +31,11 @@ Cooper é um painel pequeno, sempre visível no canto da tela, que sincroniza o 
 ## Privacidade
 O Cooper não lê nem guarda conversas nem código. Recebe só frases curtas de progresso, nomes de arquivos opcionais e números de uso (se ligado).
 
-## Situação (versão 0.6.0)
-- Funcionando: widget, tarefas com aceite e edição, contas e convites, projetos (renomear, apagar, sair), agentes por MCP, contexto em blocos, uso de IA e limites, presença Online sem hooks.
-- Cada time usa o próprio Supabase (tela de Setup com código de conexão ou SQL de instalação).
-- Pendente: branch e alterações locais reais, GitHub (pushes, PRs, CI), hooks (status Executando real) e alertas de conflito, resumos automáticos.
+## Situação (versão 0.8.1, esquema 21)
+- Funcionando: widget, tarefas com aceite e edição, subtarefas, comentários, anexos, prioridade e prazo, contas e convites, projetos, agentes por MCP, contexto em blocos com resumo, skills do time, uso de IA e limites, modo coordenador e aceite automático.
+- Git local (branch e quantidade de alterações), status Executando por hooks e "Só pessoas aprovam PRs".
+- Coordenação entre agentes: dependências com aviso, novidades no briefing (since_last), bloqueio, handoff, disponibilidade e limite de tarefas abertas.
+- GitHub: PRs, CI e revisão ligados à tarefa pela branch (a tarefa-mãe herda a branch das subtarefas), um aviso por PR no briefing, acesso de escrita de cada um, commits das evidências conferidos no git local.
+- Projeto novo já nasce com os blocos Decisões e Handoffs.
+- Cada time usa o próprio Supabase (tela de Setup com código de conexão ou SQL de instalação; supabase/upgrades para atualizar).
+- Pendente: limite de tarefas em ⚙ Ajustes, alerta de dois agentes nos mesmos arquivos, atualização automática do app, convite por e-mail.

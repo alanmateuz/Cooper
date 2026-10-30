@@ -41,7 +41,7 @@ beforeEach(setup);
 describe("versão do esquema", () => {
   it("cooper_server_info responde para anon", async () => {
     const r = await asAgent(db, (tx) => one(tx.query<{ r: unknown }>("select public.cooper_server_info() as r")));
-    expect(r.r).toEqual({ app: "cooper", schema: 20 });
+    expect(r.r).toEqual({ app: "cooper", schema: 21 });
   });
 });
 
@@ -184,8 +184,9 @@ describe("MCP compacto", () => {
     const token = await agentToken(db, ws, member.id);
     await db.query("insert into public.context_blocks (workspace_id, title, content) values ($1, 'Resumo', $2)", [ws, "x".repeat(300)]);
     const r = await call<{ blocks: Record<string, unknown>[] }>("mcp_get_workspace_context", [token, SESSION]);
-    expect(Object.keys(r.blocks[0]!).sort()).toEqual(["chars", "preview", "title", "version"]);
-    expect((r.blocks[0]!.preview as string).length).toBe(120);
+    const resumo = r.blocks.find((b) => b.title === "Resumo")!; // o projeto também nasce com Decisões e Handoffs
+    expect(Object.keys(resumo).sort()).toEqual(["chars", "preview", "title", "version"]);
+    expect((resumo.preview as string).length).toBe(120);
     expect(r).not.toHaveProperty("hint");
   });
 
