@@ -4,7 +4,7 @@ import { friendlyError } from "../lib/errors";
 import { shortSha, timeAgo } from "../lib/format";
 import { shortName } from "../lib/names";
 import type { PersonView } from "../lib/people";
-import { Avatar, Icon } from "./ui";
+import { Avatar, BrandIcon, Icon } from "./ui";
 import { useFlash } from "../lib/motion";
 
 /**
@@ -143,8 +143,9 @@ function AgentUsage({ u, now, isMe, onRefresh }: { u: UsageView | null; now: Dat
   return (
     <div>
       <div className="flex items-center gap-2 text-[11px]">
-        <span className="w-[4.6rem] shrink-0 truncate text-muted" title={info || undefined}>
-          {AGENT_LABELS[u?.agent ?? "claude_code"]}
+        <span className="flex w-[5.4rem] shrink-0 items-center gap-1 text-muted" title={info || undefined}>
+          {(u?.agent ?? "claude_code") !== "other" && <BrandIcon brand={(u?.agent ?? "claude_code") as "claude_code" | "codex"} size={11} />}
+          <span className="truncate">{AGENT_LABELS[u?.agent ?? "claude_code"]}</span>
         </span>
         {hasLimits ? (
           <div className={`grid min-w-0 flex-1 grid-cols-2 gap-2.5 ${stale ? "opacity-60" : ""}`}>

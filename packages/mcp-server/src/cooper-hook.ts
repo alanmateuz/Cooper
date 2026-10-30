@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 // Hook do Claude Code e do Codex para o Cooper: avisa que o agente está trabalhando ("Executando").
 // O agente passa um JSON do evento no stdin (mesmo formato nos dois); daqui sai só o NOME do evento (pre_tool_use, stop…).
-// Prompt, ferramenta, arquivos e caminhos do JSON são descartados. A conexão (url, chave pública e token
+// Prompt, ferramenta, arquivos e caminhos do JSON não saem da máquina. Com a revisão humana ligada, o comando
+// de terminal é olhado aqui mesmo para barrar aprovação ou merge de PR (código de saída 2).
+// Fora isso, nada do JSON é usado. A conexão (url, chave pública e token
 // do agente) vem de ~/.cooper/hook-<agente>.json, gravado pelo app ao ligar os hooks; o agente vem no 1º argumento.
-// Nunca atrapalha o agente: qualquer erro é ignorado, sai sempre com código 0 e espera no máximo 2 s.
+// Nunca atrapalha o agente: qualquer erro é ignorado, sai com código 0 (ou 2 só para barrar PR) e espera no máximo 2 s.
 // Referências: https://code.claude.com/docs/en/hooks e https://learn.chatgpt.com/docs/hooks (hook_event_name)
 import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -36,12 +38,49 @@ export function agentOf(arg: string | undefined): "claude_code" | "codex" {
   return arg === "codex" ? "codex" : "claude_code";
 }
 
+/** Comando que aprova ou faz merge de um PR no GitHub (gh pr merge, gh pr review --approve, API de merge). */
+export function approvesPr(command: string): boolean {
+  const c = command.replace(/\s+/g, " ");
+  return (
+    /\bgh pr merge\b/.test(c) ||
+    (/\bgh pr review\b/.test(c) && /(--approve|(^|\s)-a(\s|$))/.test(c)) ||
+    /\bgh api\b.*\/pulls\/\d+\/merge\b/.test(c)
+  );
+}
+
+/** Comando de terminal do evento (Claude Code: Bash; Codex: shell), ou null. Fica só nesta máquina. */
+export function commandOf(input: unknown): string | null {
+  const ti = input && typeof input === "object" ? (input as Record<string, unknown>).tool_input : null;
+  const cmd = ti && typeof ti === "object" ? (ti as Record<string, unknown>).command : null;
+  if (typeof cmd === "string") return cmd;
+  return Array.isArray(cmd) && cmd.every((x) => typeof x === "string") ? cmd.join(" ") : null;
+}
+
+/** Política do projeto, gravada pelo app em ~/.cooper/hook-policy.json. */
+function blockPrApproval(): boolean {
+  try {
+    return JSON.parse(readFileSync(join(cooperDir(), "hook-policy.json"), "utf8")).block_pr_approval === true;
+  } catch {
+    return false;
+  }
+}
+
 async function main() {
   const agent = agentOf(process.argv[2]);
   const chunks: Buffer[] = [];
   for await (const c of process.stdin) chunks.push(c as Buffer);
-  const event = eventOf(JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}"));
+  const input = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+  const event = eventOf(input);
   if (!event) return;
+
+  // Revisão humana ligada: o agente não aprova nem faz merge de PR. Verificado aqui, sem enviar o comando a ninguém.
+  if (event === "pre_tool_use") {
+    const cmd = commandOf(input);
+    if (cmd && approvesPr(cmd) && blockPrApproval()) {
+      process.stderr.write("Cooper: neste projeto só uma pessoa aprova ou faz merge de PRs. Peça a revisão ao usuário em vez de aprovar.\n");
+      process.exit(2); // código 2 = bloquear a ferramenta (Claude Code e Codex)
+    }
+  }
 
   const lastFile = join(cooperDir(), `hook-last-${agent}.json`);
   let last: { event?: string; at?: number } | null = null;

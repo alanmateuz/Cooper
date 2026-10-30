@@ -76,6 +76,12 @@ export function Widget({
   const { repo, reload: reloadRepo } = useTeamRepo(data.workspace?.id ?? null);
   const [repoVersion, setRepoVersion] = useState(0);
   useGitSync(data.workspace?.id ?? null, repo, repoVersion);
+  // política local dos hooks: com "Só pessoas aprovam PRs", o hook barra aprovação e merge de PR pelo agente
+  const humanReview = data.workspace?.require_human_review;
+  useEffect(() => {
+    if (!inTauri || humanReview === undefined) return;
+    void import("@tauri-apps/api/core").then(({ invoke }) => invoke("set_hook_policy", { blockPrApproval: humanReview })).catch(() => {});
+  }, [humanReview]);
   const sharing = myMember?.share_usage ?? false;
   const { report: rawUsage, reload: reloadUsage } = useLocalUsage();
   // Agentes que a pessoa tirou do cartão (⚙ → Uso de IA): o uso deles não é lido para mostrar nem enviado.
@@ -227,6 +233,12 @@ export function Widget({
                     repo={repo}
                     onRepoChange={() => void reloadRepo()}
                     onPathChange={() => setRepoVersion((v) => v + 1)}
+                    humanReview={data.workspace.require_human_review}
+                    onHumanReview={async (on) => {
+                      const { error } = await supabase.from("workspaces").update({ require_human_review: on }).eq("id", data.workspace!.id);
+                      if (error) throw error;
+                      await loadWorkspaces(data.workspace!.id);
+                    }}
                   />
                 </SettingsSection>
                 <SettingsSection title="IA e tarefas">

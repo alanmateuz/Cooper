@@ -11,6 +11,7 @@ import { AgentsSection } from "./AgentsSection";
 import { AgentHooks } from "./AgentHooks";
 import { ProjectInstructions } from "./ProjectInstructions";
 import { playUi, setUiSounds, uiSoundsEnabled } from "../lib/sound";
+import { BrandIcon, Icon } from "./ui";
 
 
 export function SettingsTab({
@@ -108,10 +109,25 @@ export function SettingsTab({
 }
 
 /** Um grupo de Ajustes: título pequeno em cima e um cartão. `rows`: itens separados por linhas finas. */
+const SECTION_ICONS: Record<string, React.ReactNode> = {
+  Geral: <Icon name="gear" size={12} />,
+  Notificações: <Icon name="bell" size={12} />,
+  Equipe: <Icon name="users" size={12} />,
+  Projeto: <Icon name="folder" size={12} />,
+  "Novo projeto": <Icon name="plus" size={12} />,
+  Repositório: <BrandIcon brand="github" size={12} />,
+  "IA e tarefas": <Icon name="sparkle" size={12} />,
+  "Uso de IA": <Icon name="gauge" size={12} />,
+  Agentes: <Icon name="terminal" size={12} />,
+};
+
 export function SettingsSection({ title, rows, children }: { title: string; rows?: boolean; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="mb-1 px-1 text-[10.5px] font-semibold tracking-wide text-muted uppercase">{title}</h2>
+      <h2 className="mb-1 flex items-center gap-1.5 px-1 text-[10.5px] font-semibold tracking-wide text-muted uppercase">
+        {SECTION_ICONS[title]}
+        {title}
+      </h2>
       <div className={`rounded-xl border border-line bg-panel ${rows ? "divide-y divide-line/70 px-2.5" : "space-y-3 p-2.5"}`}>{children}</div>
     </section>
   );

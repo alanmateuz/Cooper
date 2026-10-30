@@ -154,6 +154,7 @@ export function DemoPreview() {
 function DemoSettings() {
   const [owner, setOwner] = useState(true);
   const [repo, setRepo] = useState<Repository | null>(null);
+  const [review, setReview] = useState(false);
   const ws = owner ? "demo-dono" : "demo-membro";
   const btn = "rounded-md border border-line bg-panel px-2 py-1 text-[11px] hover:bg-raised";
   return (
@@ -188,6 +189,8 @@ function DemoSettings() {
           repo={repo}
           onRepoChange={(r) => r && setRepo({ id: "r", workspace_id: "w", owner: r.owner, name: r.name, default_branch: "main" })}
           onPathChange={() => {}}
+          humanReview={review}
+          onHumanReview={async (on) => setReview(on)}
         />
       </SettingsSection>
       <SettingsSection title="Agentes">

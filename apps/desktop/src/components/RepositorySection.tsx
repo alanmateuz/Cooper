@@ -3,6 +3,8 @@ import { friendlyError } from "../lib/errors";
 import { gitStatus, repoPath, sameRepo, setRepoPath, type GitStatus, type Repository } from "../lib/repo";
 import { supabase } from "../lib/supabase";
 import { inTauri } from "../lib/window";
+import { Toggle } from "./OtherTabs";
+import { BrandIcon } from "./ui";
 
 const DEMO_STATUS: GitStatus = { remote: { owner: "alanmateuz", name: "hacko" }, branch: "claude/header", head_sha: null, ahead: 0, behind: 1, dirty_files_count: 3 };
 
@@ -24,6 +26,8 @@ export function RepositorySection({
   onRepoChange,
   onPathChange,
   demo,
+  humanReview,
+  onHumanReview,
 }: {
   workspaceId: string;
   isOwner: boolean;
@@ -33,6 +37,9 @@ export function RepositorySection({
   onPathChange: () => void;
   /** demonstração no navegador (?demo): pasta e git simulados */
   demo?: boolean;
+  /** revisão humana do projeto; undefined = servidor sem o esquema 18 */
+  humanReview?: boolean;
+  onHumanReview?: (on: boolean) => Promise<void>;
 }) {
   const [path, setPath] = useState(() => repoPath(workspaceId));
   const [status, setStatus] = useState<GitStatus | null>(null);
@@ -82,8 +89,11 @@ export function RepositorySection({
   return (
     <div className="space-y-1.5">
       {repo ? (
-        <p>
-          Repositório do time: <b>github.com/{repo.owner}/{repo.name}</b>
+        <p className="flex items-center gap-1.5">
+          <BrandIcon brand="github" size={13} />
+          <span>
+            Repositório do time: <b>github.com/{repo.owner}/{repo.name}</b>
+          </span>
         </p>
       ) : (
         <p className="text-[10.5px] leading-snug text-muted">
@@ -122,6 +132,53 @@ export function RepositorySection({
           </button>
         )
       )}
+      {err && <p className="text-[10.5px] text-danger">{err}</p>}
+      {humanReview !== undefined && <HumanReview on={humanReview} isOwner={isOwner} repo={repo} onChange={onHumanReview} />}
+    </div>
+  );
+}
+
+/**
+ * Só pessoas aprovam: o agente leva tarefas até "Em revisão" (servidor) e o hook barra `gh pr merge`/`--approve`
+ * (máquina de cada um, com os hooks ligados). Para o GitHub exigir também, a proteção de branch fica no GitHub.
+ */
+function HumanReview({ on, isOwner, repo, onChange }: { on: boolean; isOwner: boolean; repo: Repository | null; onChange?: (on: boolean) => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <div className="space-y-1 border-t border-line pt-2">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="font-medium">Só pessoas aprovam PRs</div>
+          <p className="text-[10.5px] leading-snug text-muted">
+            Ligado, a IA não aprova nem faz merge de pull requests (o hook de cada um bloqueia) e as tarefas que ela conclui param em
+            <b> Em revisão</b> até alguém aprovar. Desligado, a IA pode concluir sozinha.
+            {!isOwner && " Só o dono do projeto muda."}
+          </p>
+        </div>
+        <Toggle
+          checked={on}
+          disabled={!isOwner || busy || !onChange}
+          label="Só pessoas aprovam PRs"
+          onChange={(v) => {
+            setBusy(true);
+            setErr(null);
+            onChange?.(v)
+              .catch((e) => setErr(friendlyError(e)))
+              .finally(() => setBusy(false));
+          }}
+        />
+      </div>
+      {on && repo && (
+        <p className="text-[10.5px] leading-snug text-muted">
+          Para o próprio GitHub também exigir:{" "}
+          <a href={`https://github.com/${repo.owner}/${repo.name}/settings/branches`} target="_blank" rel="noreferrer" className="text-accent hover:underline">
+            proteção de branch
+          </a>{" "}
+          → "Require a pull request before merging" com 1 aprovação.
+        </p>
+      )}
+      {on && <p className="text-[10.5px] leading-snug text-muted">O bloqueio de PR precisa do "Status em tempo real" ligado em ⚙ → Agentes.</p>}
       {err && <p className="text-[10.5px] text-danger">{err}</p>}
     </div>
   );

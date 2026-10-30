@@ -2,6 +2,7 @@ import { AGENT_LABELS } from "@cooper/shared";
 import { useState } from "react";
 import { friendlyError } from "../lib/errors";
 import { inTauri } from "../lib/window";
+import { BrandIcon } from "./ui";
 
 interface Plan {
   file: string;
@@ -72,7 +73,8 @@ export function AgentHooks({ demo }: { demo?: boolean } = {}) {
       {!plan && (
         <div className="flex flex-wrap gap-1.5">
           {KINDS.map((k) => (
-            <button key={k} type="button" disabled={busy} onClick={() => void call("preview_agent_hooks", k).then((p) => p && (setPlan({ ...p, kind: k }), setDone(null)))} className={btn}>
+            <button key={k} type="button" disabled={busy} onClick={() => void call("preview_agent_hooks", k).then((p) => p && (setPlan({ ...p, kind: k }), setDone(null)))} className={`${btn} inline-flex items-center gap-1.5`}>
+              <BrandIcon brand={k} size={12} />
               {AGENT_LABELS[k]}: ver o que muda
             </button>
           ))}
@@ -80,7 +82,10 @@ export function AgentHooks({ demo }: { demo?: boolean } = {}) {
       )}
       {plan && (
         <div className="space-y-1 rounded-md border border-line bg-raised/60 p-1.5 text-[10.5px] leading-snug">
-          <p className="font-medium">{AGENT_LABELS[plan.kind]}</p>
+          <p className="flex items-center gap-1.5 font-medium">
+            <BrandIcon brand={plan.kind} size={12} />
+            {AGENT_LABELS[plan.kind]}
+          </p>
           <p>
             Arquivo: <code className="break-all">{plan.file}</code>
           </p>

@@ -220,6 +220,15 @@ pub fn remove_agent_hooks(app: AppHandle, kind: String) -> Result<HooksPlan, Str
     Ok(plan(&path, &root, our_command(&app, a).unwrap_or_default(), backup))
 }
 
+/// Política lida pelo hook antes de cada ferramenta: com `block_pr_approval`, o agente não aprova nem faz merge de PR.
+/// O app grava ao abrir o projeto e quando o dono muda a chave "Só pessoas aprovam".
+#[tauri::command]
+pub fn set_hook_policy(block_pr_approval: bool) -> Result<(), String> {
+    let dir = cooper_dir()?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    write_atomic(&dir.join("hook-policy.json"), &json!({ "block_pr_approval": block_pr_approval }).to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

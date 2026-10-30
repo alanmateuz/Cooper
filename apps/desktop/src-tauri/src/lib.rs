@@ -64,6 +64,7 @@ pub fn run() {
             agent_hooks::preview_agent_hooks,
             agent_hooks::install_agent_hooks,
             agent_hooks::remove_agent_hooks,
+            agent_hooks::set_hook_policy,
             git_repo::git_repo_status,
             project_instructions::preview_agent_instructions,
             project_instructions::write_agent_instructions

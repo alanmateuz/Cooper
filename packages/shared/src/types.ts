@@ -15,6 +15,8 @@ export interface Workspace {
   name: string;
   created_by: string;
   created_at: string;
+  /** só pessoas concluem tarefas e aprovam PRs (servidor no esquema 18; ausente em servidores antigos) */
+  require_human_review?: boolean;
 }
 
 export interface WorkspaceMember {
