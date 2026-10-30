@@ -22,9 +22,11 @@ O Cooper é como um **mini-player do time**: fica por cima das outras janelas e 
 | Quem está trabalhando agora? | Um cartão por pessoa, com um ponto de status |
 | Com qual agente? | "Alan · Codex", "Bia · Claude Code" |
 | Em quê? | Tarefa atual (#1, #2…) e a última frase de progresso |
-| Onde? | Branch e alterações locais *(em construção: Fase 3)* |
+| Onde? | Branch e quantos arquivos cada um alterou (nunca nomes nem conteúdo) |
 | Qual o contexto do projeto? | Aba **Contexto**: resumo, arquitetura, convenções |
-| Tem risco de conflito? | Alertas no topo *(em construção: Fase 4)* |
+| Quem depende de quem? | Dependências entre tarefas, bloqueios e o aviso quando uma tarefa libera a outra |
+| O que está no GitHub? | PRs, CI e revisão ligados à tarefa pela branch |
+| Tem risco de conflito? | Hoje a IA consulta o que o time está mexendo antes de editar; alerta automático *(em construção)* |
 
 Ele **não** programa, não substitui o Codex nem o Claude Code e não é um Jira. Cada pessoa continua usando suas ferramentas normalmente; o Cooper só **sincroniza o contexto, as tarefas e o progresso**.
 
@@ -58,9 +60,9 @@ Todo dado no widget mostra a sua **origem** num selo pequeno, porque nem tudo te
 | Selo | Significa |
 |---|---|
 | `declarado` | O agente disse. Ninguém conferiu. |
-| `hook` | O próprio Codex ou Claude Code avisou que executou algo. É observado, não dito. *(Fase 4)* |
-| `git local` | Lido do repositório na máquina da pessoa. *(Fase 3)* |
-| `GitHub` | Veio do GitHub. *(Fase 3)* |
+| `hook` | O próprio Codex ou Claude Code avisou que executou algo. É observado, não dito. |
+| `git local` | Lido do repositório na máquina da pessoa. |
+| `GitHub` | Veio do GitHub (PR, CI, revisão). |
 | `usuário` | Uma pessoa fez pelo widget. |
 
 O status **"Executando"** só aparece com evidência recente (hook). Ter uma branch ou uma tarefa "em andamento" não basta.
@@ -117,9 +119,11 @@ Requisito para o passo dos agentes: **Node.js 20 ou mais novo** instalado.
 | Instalador para Windows | ✅ funcionando (Releases do GitHub) |
 | Cada time com o próprio servidor (Setup, código de conexão) | ✅ funcionando |
 | Editar tarefa, renomear/apagar/sair do projeto, remover membro, trocar senha | ✅ funcionando |
-| Branch, commits e alterações locais reais | ⏳ Fase 3 |
-| GitHub (pushes, PRs, CI) | ⏳ Fase 3 |
-| Status "Executando" real (hooks) e alertas de conflito | ⏳ Fase 4 |
-| Resumos automáticos com IA | ⏳ Fase 5 |
-
-> Branch e "arquivos não commitados" só aparecem quando a leitura do git local existir (Fase 3). Até lá, esses campos ficam vazios.
+| Subtarefas, comentários, anexos, prioridade e prazo | ✅ funcionando |
+| Contexto em blocos com histórico, resumo e skills do time | ✅ funcionando |
+| Branch e alterações locais (git local) | ✅ funcionando |
+| Status "Executando" real (hooks) e "Só pessoas aprovam PRs" | ✅ funcionando |
+| Coordenação entre agentes: dependências, bloqueio, handoff, disponibilidade, limite de tarefas | ✅ funcionando (0.8) |
+| GitHub: PRs, CI e revisão ligados às tarefas, um aviso por PR, tarefa-mãe com o PR | ✅ funcionando (0.8.1) |
+| Alerta automático quando dois agentes mexem nos mesmos arquivos | ⏳ próximo passo |
+| Limite de tarefas em ⚙ Ajustes, atualização automática do app, convite por e-mail | ⏳ próximo passo |
