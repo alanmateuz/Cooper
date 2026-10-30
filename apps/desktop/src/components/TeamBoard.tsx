@@ -30,14 +30,17 @@ export function TeamBoard({
   now,
   usageOf,
   onRefreshClaude,
+  initialView,
 }: {
   people: PersonView[];
   me: string;
   now: Date;
   usageOf: (userId: string) => UsageView[];
   onRefreshClaude?: () => Promise<void>;
+  /** só para a demonstração (prints): começa nesta visão em vez da preferência salva */
+  initialView?: View;
 }) {
-  const [view, setView] = useState<View>(() => savedView() ?? (people.length >= 3 ? "equipe" : "pessoas"));
+  const [view, setView] = useState<View>(() => initialView ?? savedView() ?? (people.length >= 3 ? "equipe" : "pessoas"));
   const [focus, setFocus] = useState<string | null>(null);
   const choose = (v: View) => {
     setView(v);

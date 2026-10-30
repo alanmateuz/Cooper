@@ -108,6 +108,35 @@ export function DemoPreview() {
   const shown = people.slice(0, count);
   const me = shown[0]!.userId;
 
+  // ?demo&shot=pessoas|equipe|ajustes|pilula: só uma peça, sem moldura, para os prints do README
+  const shot = new URLSearchParams(location.search).get("shot");
+  if (shot) {
+    const frame = (w: number, h: number, view: "equipe" | "pessoas") => (
+      <div className="flex flex-col overflow-hidden rounded-xl border border-line bg-bg" style={{ width: w, height: h }}>
+        <header className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
+          <LogoMark height={14} />
+          <span className="font-semibold">Hacko</span>
+          <span className="ml-auto text-[10.5px] text-muted">{shown.length} pessoas</span>
+        </header>
+        <div className="min-h-0 flex-1">
+          <TeamBoard people={shown} me={me} now={now} usageOf={(id) => usage[id] ?? []} initialView={view} />
+        </div>
+      </div>
+    );
+    return (
+      <div className="inline-block bg-[#2a2d35] p-4 light:bg-[#c9ccd3]" id="shot">
+        {shot === "pessoas" && frame(980, 420, "pessoas")}
+        {shot === "equipe" && frame(420, 400, "equipe")}
+        {shot === "ajustes" && <DemoSettings filled />}
+        {shot === "pilula" && (
+          <div style={{ width: 340, height: 44 }}>
+            <Pill people={shown} me={me} usageOf={(id) => usage[id] ?? []} alerts={0} awaiting={2} onExpand={() => {}} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   const btn = "rounded-md border border-line bg-panel px-2 py-1 text-[11px] hover:bg-raised";
   return (
     <div className="flex h-full flex-col gap-4 overflow-auto bg-[#2a2d35] p-6 light:bg-[#c9ccd3] [&>*]:mx-auto">
@@ -151,15 +180,20 @@ export function DemoPreview() {
 }
 
 /** Ajustes → Repositório e Agentes → Status em tempo real, com pasta, git e hooks simulados. */
-function DemoSettings() {
+function DemoSettings({ filled }: { filled?: boolean }) {
   const [owner, setOwner] = useState(true);
-  const [repo, setRepo] = useState<Repository | null>(null);
-  const [review, setReview] = useState(false);
+  // filled: já com repositório, cópia e revisão humana (para o print)
+  const [repo, setRepo] = useState<Repository | null>(() => {
+    if (!filled) return null;
+    setRepoPath("demo-dono", "C:/Users/voce/code/hacko");
+    return { id: "r", workspace_id: "w", owner: "alanmateuz", name: "hacko", default_branch: "main" };
+  });
+  const [review, setReview] = useState(!!filled);
   const ws = owner ? "demo-dono" : "demo-membro";
   const btn = "rounded-md border border-line bg-panel px-2 py-1 text-[11px] hover:bg-raised";
   return (
     <div className="w-[360px] shrink-0 space-y-2 rounded-xl border border-line bg-bg p-3 shadow-2xl">
-      <div className="flex items-center gap-1.5 text-[11px]">
+      {!filled && <div className="flex items-center gap-1.5 text-[11px]">
         <b>Ajustes (demo)</b>
         <span className="ml-auto text-muted">ver como</span>
         {[true, false].map((o) => (
@@ -179,7 +213,7 @@ function DemoSettings() {
         <button type="button" onClick={() => (setRepo(null), setRepoPath("demo-dono", null), setRepoPath("demo-membro", null), setOwner(true))} className={btn}>
           zerar
         </button>
-      </div>
+      </div>}
       <SettingsSection title="Repositório">
         <RepositorySection
           key={`${ws}-${repo ? 1 : 0}`}
@@ -196,7 +230,7 @@ function DemoSettings() {
       <SettingsSection title="Agentes">
         <AgentHooks demo />
       </SettingsSection>
-      <SettingsSection title="Contexto → Nova skill (só visual)">
+      <SettingsSection title={filled ? "Contexto → Nova skill" : "Contexto → Nova skill (só visual)"}>
         <NewSkill workspaceId="demo" onDone={() => {}} />
       </SettingsSection>
     </div>

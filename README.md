@@ -15,7 +15,7 @@ time num painel de mesa sempre visível, e os agentes de cada uma se conectam ao
 mesmo contexto do projeto, informam o que estão fazendo e consultam o que os agentes dos colegas estão fazendo.
 
 <p align="center">
-  <img src="docs/assets/screenshot-agora.png" alt="Aba Agora: um cartão por pessoa com agente, tarefa atual e uso de IA" width="420">
+  <img src="docs/assets/screenshot-agora.png" alt="Aba Agora: um cartão por pessoa com tarefa, agente e limites de IA" width="720">
 </p>
 
 ---
@@ -99,14 +99,14 @@ O painel do Bruno é atualizado em tempo real a cada um desses passos.
 
 ## Telas
 
-| Agora | Atividade | Agentes |
+| Agora: Pessoas | Agora: Equipe | Ajustes |
 |---|---|---|
-| <img src="docs/assets/screenshot-agora.png" alt="Aba Agora" width="260"> | <img src="docs/assets/screenshot-atividade.png" alt="Linha do tempo com tarefas aceitas e iniciadas" width="260"> | <img src="docs/assets/screenshot-agentes.png" alt="Ajustes: uso de IA e token dos agentes" width="260"> |
-| Visão **Equipe** (lista com a folga de IA de cada um) ou **Pessoas** (um cartão por pessoa, com a tarefa na cor dela) | Linha do tempo do time, com quem aceitou, iniciou ou moveu cada tarefa | Token por agente para o MCP e controle do que o uso de IA compartilha com o time |
+| <img src="docs/assets/screenshot-agora.png" alt="Visão Pessoas: um cartão por pessoa com a tarefa na cor dela e os limites de IA" width="300"> | <img src="docs/assets/screenshot-equipe.png" alt="Visão Equipe: lista com tarefa e folga de IA de cada pessoa" width="260"> | <img src="docs/assets/screenshot-ajustes.png" alt="Ajustes: repositório, só pessoas aprovam PRs, status em tempo real e nova skill" width="200"> |
+| Um cartão por pessoa: tarefa na cor dela, o que o agente declarou, limites de 5 h e da semana por agente e branch | A folga de IA de cada um, para decidir para quem mandar trabalho; clicar abre o cartão da pessoa | Repositório do time, "Só pessoas aprovam PRs", hooks do Claude Code e do Codex e nova skill |
 
 <p align="center">
   <img src="docs/assets/screenshot-compacto.png" alt="Modo compacto: a pessoa, a tarefa e o uso" width="420"><br>
-  <sub>Modo compacto.</sub>
+  <sub>Modo compacto: a pessoa em foco, a tarefa, o limite de 5 h e o resto do time.</sub>
 </p>
 
 ## Decisões de design
