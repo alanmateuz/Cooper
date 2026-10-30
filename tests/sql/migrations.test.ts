@@ -53,9 +53,7 @@ describe("migrações", () => {
 
   it("supabase/upgrades/17-para-18.sql leva um servidor no esquema 17 ao mesmo esquema de uma instalação nova", async () => {
     const upTo17 = migrationFiles().filter((f) => f < "20261030000018").map((f) => readFileSync(join(MIGRATIONS_DIR, f), "utf8"));
-    const db = await freshDb({ sql: upTo17.join("
-;
-") });
+    const db = await freshDb({ sql: upTo17.join("\n;\n") });
     await db.exec(readFileSync(join(MIGRATIONS_DIR, "..", "upgrades", "17-para-18.sql"), "utf8"));
     expect(await schemaSignature(db)).toEqual(await schemaSignature(await freshDb()));
   });
